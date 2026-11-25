@@ -1,22 +1,137 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="리소스 파일">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="리소스 파일\Scene">
+      <UniqueIdentifier>{A1B2C3D4-0004-4000-8000-000000000004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="리소스 파일\IO">
+      <UniqueIdentifier>{A1B2C3D4-0003-4000-8000-000000000003}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="리소스 파일\Domain">
+      <UniqueIdentifier>{A1B2C3D4-0002-4000-8000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="리소스 파일\Core">
+      <UniqueIdentifier>{A1B2C3D4-0001-4000-8000-000000000001}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>소스 파일</Filter>
+    <ClInclude Include="Core\_Game.h">
+      <Filter>리소스 파일\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\_GameManager.h">
+      <Filter>리소스 파일\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\_IBlockEffect.h">
+      <Filter>리소스 파일\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\_IItem.h">
+      <Filter>리소스 파일\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\_Types.h">
+      <Filter>리소스 파일\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Domain\_Block.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="Domain\_BlockFactory.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="Domain\_Board.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="Domain\_BotPlayer.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="Domain\_Player.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="Domain\_Stage.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
+    <ClInclude Include="IO\_Console.h">
+      <Filter>리소스 파일\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="IO\_InputHandler.h">
+      <Filter>리소스 파일\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="IO\_Renderer.h">
+      <Filter>리소스 파일\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="IO\_TextBox.h">
+      <Filter>리소스 파일\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\_GameOverScene.h">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\_PauseScene.h">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\_PlayScene.h">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\_Scene.h">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\_TitleScene.h">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Core\Game.cpp">
+      <Filter>리소스 파일\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\GameManager.cpp">
+      <Filter>리소스 파일\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\Block.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\BlockFactory.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\Board.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\BotPlayer.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\Player.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\Stage.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="IO\Console.cpp">
+      <Filter>리소스 파일\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="IO\InputHandler.cpp">
+      <Filter>리소스 파일\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="IO\Renderer.cpp">
+      <Filter>리소스 파일\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="IO\TextBox.cpp">
+      <Filter>리소스 파일\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Scene\GameOverScene.cpp">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\PauseScene.cpp">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\PlayScene.cpp">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\Scene.cpp">
+      <Filter>리소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\TitleScene.cpp">
+      <Filter>리소스 파일\Scene</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
