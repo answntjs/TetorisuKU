@@ -1,6 +1,8 @@
 #include "_GameManager.h"
 #include <algorithm>
 #include <random>
+#include <utility>
+#include <vector>
 
 void GameManager::setup(GameMode mode, int startLevel, bool borderless)
 {
@@ -58,6 +60,7 @@ void GameManager::update(float dt, const InputHandler& input)
 	}
 
 	const float dropInterval = stage_->getConfig().dropIntervalSec;
+	std::vector<std::pair<int, int>> pendingAttacks;
 
 	for (size_t i = 0; i < players_.size(); ++i)
 	{
@@ -87,10 +90,16 @@ void GameManager::update(float dt, const InputHandler& input)
 				const int attack = computeAttackLines(result);
 				if (attack > 0)
 				{
-					sendGarbageToOpponents(static_cast<int>(i), attack, 1);
+					pendingAttacks.emplace_back(static_cast<int>(i), attack);
 				}
 			}
 		}
+	}
+
+	// Apply attacks after every player has processed this frame's input.
+	for (const auto& [attackerIndex, attackLines] : pendingAttacks)
+	{
+		sendGarbageToOpponents(attackerIndex, attackLines, 1);
 	}
 
 	stage_->onUpdate(dt, *this);
