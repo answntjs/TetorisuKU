@@ -15,8 +15,7 @@ void PlayScene::onEnter()
 {
 	gameManager_.setup(mode_, startLevel_, borderless_);
 	gameOverPushed_ = false;
-	briefing_ = isStoryMode(mode_);
-	promotion_ = false;
+	briefing_ = isStoryMode(mode_) ? Briefing::Opening : Briefing::Hidden;
 }
 
 void PlayScene::handleInput(const InputHandler& input)
@@ -29,11 +28,11 @@ void PlayScene::handleInput(const InputHandler& input)
 		return;
 	}
 
-	if (briefing_)
+	if (briefing_ != Briefing::Hidden)
 	{
 		if (input.isKeyPressed(VK_RETURN) || input.isKeyPressed(VK_SPACE))
 		{
-			briefing_ = false;
+			briefing_ = Briefing::Hidden;
 		}
 		return;
 	}
@@ -65,17 +64,16 @@ void PlayScene::update(float dt)
 		if (mode_ == GameMode::StorySolo
 			&& gameManager_.getStage()->getConfig().stageNumber != previousCase)
 		{
-			briefing_ = true;
-			promotion_ = true;
+			briefing_ = Briefing::Handoff;
 		}
 	}
 }
 
 void PlayScene::render(Console& console, const Renderer& renderer) const
 {
-	if (briefing_)
+	if (briefing_ != Briefing::Hidden)
 	{
-		renderer.renderStoryBriefing(console, gameManager_, promotion_);
+		renderer.renderStoryBriefing(console, gameManager_, briefing_ == Briefing::Handoff);
 	}
 	else
 	{

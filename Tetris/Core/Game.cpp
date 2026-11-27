@@ -2,6 +2,7 @@
 #include "../Scene/_TitleScene.h"
 #include <algorithm>
 #include <chrono>
+#include <utility>
 
 Game::Game(std::ostream& out)
 	: console_(out)
@@ -79,7 +80,9 @@ void Game::changeScene(std::unique_ptr<Scene> scene)
 
 void Game::applyPendingTransitions()
 {
-	for (auto& tr : pendingTransitions_)
+	// Requests made by a scene's lifecycle methods are processed next frame.
+	auto transitions = std::exchange(pendingTransitions_, {});
+	for (auto& tr : transitions)
 	{
 		if (tr.type == TransitionType::Push)
 		{
@@ -111,5 +114,4 @@ void Game::applyPendingTransitions()
 			}
 		}
 	}
-	pendingTransitions_.clear();
 }

@@ -20,6 +20,6 @@ private:
 	GameManager gameManager_;
 	const InputHandler* lastInput_ = nullptr;
 	bool gameOverPushed_ = false;
-	bool briefing_ = false;
-	bool promotion_ = false;
+	enum class Briefing { Hidden, Opening, Handoff };
+	Briefing briefing_ = Briefing::Hidden;
 };

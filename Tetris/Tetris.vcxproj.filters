@@ -55,6 +55,9 @@
     <ClInclude Include="Domain\_Stage.h">
       <Filter>리소스 파일\Domain</Filter>
     </ClInclude>
+    <ClInclude Include="Domain\_StoryGimmick.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
     <ClInclude Include="IO\_Console.h">
       <Filter>리소스 파일\IO</Filter>
     </ClInclude>
@@ -62,6 +65,9 @@
       <Filter>리소스 파일\IO</Filter>
     </ClInclude>
     <ClInclude Include="IO\_Renderer.h">
+      <Filter>리소스 파일\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="IO\_StoryPresentation.h">
       <Filter>리소스 파일\IO</Filter>
     </ClInclude>
     <ClInclude Include="IO\_TextBox.h">
@@ -111,6 +117,9 @@
     <ClCompile Include="Domain\Stage.cpp">
       <Filter>리소스 파일\Domain</Filter>
     </ClCompile>
+    <ClCompile Include="Domain\StoryGimmick.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
     <ClCompile Include="IO\Console.cpp">
       <Filter>리소스 파일\IO</Filter>
     </ClCompile>
@@ -118,6 +127,9 @@
       <Filter>리소스 파일\IO</Filter>
     </ClCompile>
     <ClCompile Include="IO\Renderer.cpp">
+      <Filter>리소스 파일\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="IO\StoryPresentation.cpp">
       <Filter>리소스 파일\IO</Filter>
     </ClCompile>
     <ClCompile Include="IO\TextBox.cpp">

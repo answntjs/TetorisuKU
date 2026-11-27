@@ -14,9 +14,11 @@ public:
 	void update(float dt) override;
 	void render(Console& console, const Renderer& renderer) const override;
 
-	bool isTransparent() const override { return true; }
+	bool isTransparent() const override { return !showsPromotion(); }
 
 private:
+	bool showsPromotion() const { return mode_ == GameMode::StorySolo && victory_; }
+
 	std::string message_;
 	std::array<std::string, 2> stats_;
 	GameMode mode_;

@@ -51,7 +51,7 @@ void GameManager::setup(GameMode mode, int startLevel, bool borderless, unsigned
 	case GameMode::StorySolo:
 		stage_ = makeStorySoloStage(startLevel_, borderless_, storyRng_());
 		players_.push_back(std::make_unique<Player>(
-			"경찰", KeyBinding::SingleDefault(), Viewport{ 36, 9 }, borderless_, seed));
+			"경찰", KeyBinding::SingleDefault(), Viewport{ 36, 10 }, borderless_, seed));
 		break;
 	default:
 		throw std::invalid_argument("Unknown game mode");
@@ -192,7 +192,7 @@ void GameManager::updateStoryProgress()
 	const int next = stage_->getConfig().stageNumber + 1;
 	if (next > StoryCaseCount)
 	{
-		finish(true, "체포 성공 - 모든 사건 해결!");
+		finish(true, "체포 성공 - 마지막 사건 해결!");
 		return;
 	}
 

@@ -2,30 +2,42 @@
 
 #include "_Stage.h"
 #include <array>
+#include <cstddef>
 #include <memory>
-#include <string_view>
+
+enum class StoryGimmickKind { HoldTheft, FalsePreview, Hostage, RotationLock, PermanentLine, Count };
+inline constexpr auto StoryGimmickCount = static_cast<std::size_t>(StoryGimmickKind::Count);
+
+enum class PursuitCue
+{
+	None, HoldStolen, FalsePreview, HostageTaken, RotationLocked, FearWarning, FearRise, HostageExpired
+};
+
+struct PursuitMessage
+{
+	PursuitCue cue = PursuitCue::None;
+	float timeLeft = 0.0f;
+};
 
 struct PursuitStatus
 {
 	int score = 0;
 	int target = 0;
 	float hostageTime = 0.0f;
-	std::string_view notice;
-	float noticeTime = 0.0f;
+	PursuitMessage notice;
+	PursuitMessage fear;
 	std::array<float, 2> attackTime{};
 };
 
 struct StoryCase
 {
 	const char* title;
-	const char* suspect;
-	const char* dialogue;
 	int startingScore;
 	float escapeInterval;
 	int escapePenalty;
 	float dropInterval;
 	int gimmickChance;
-	std::array<int, 5> gimmickWeights;
+	std::array<int, StoryGimmickCount> gimmickWeights;
 };
 
 inline constexpr int StoryCaseCount = 5;

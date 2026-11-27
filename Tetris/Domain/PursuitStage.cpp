@@ -1,28 +1,22 @@
 #include "_PursuitStage.h"
+#include "_StoryGimmick.h"
 #include "_Player.h"
 #include "../Core/_GameManager.h"
 #include <algorithm>
-#include <cassert>
 #include <random>
 
 namespace
 {
-	enum class GimmickKind { HoldTheft, FalsePreview, Hostage, RotationLock, PermanentLine };
 	constexpr int kSoloGoalGap = 300;
 	constexpr int kDuelTarget = 3000;
-	constexpr float kHostageLimit = 15.0f;
+	constexpr float kNoticeDuration = 2.0f;
 
 	constexpr std::array<StoryCase, StoryCaseCount> kCases = { {
-		{ "경범죄", "빨간 모자", "골목만 돌면 따돌릴 수 있어.",
-			650, 20.0f, 25, 0.60f, 0, { 0, 0, 0, 0, 0 } },
-		{ "소매치기", "은빛 손", "잠깐 한눈판 사이에도 손은 움직이지.",
-			700, 18.0f, 30, 0.55f, 12, { 100, 0, 0, 0, 0 } },
-		{ "사기", "가짜 신사", "다음 수가 보인다고? 눈을 믿어 봐.",
-			750, 16.0f, 35, 0.48f, 15, { 0, 100, 0, 0, 0 } },
-		{ "강도", "황금 가면", "인질부터 구해 봐. 시간이 얼마 없을걸.",
-			800, 16.0f, 40, 0.44f, 8, { 0, 0, 100, 0, 0 } },
-		{ "살인 사건", "검은 그림자", "이 골목 끝에서 기다리고 있지.",
-			850, 15.0f, 45, 0.38f, 18, { 20, 25, 10, 30, 15 } }
+		{ "경범죄", 650, 20.0f, 25, 0.60f, 0, { 0, 0, 0, 0, 0 } },
+		{ "소매치기", 700, 18.0f, 30, 0.55f, 14, { 100, 0, 0, 0, 0 } },
+		{ "사기", 750, 16.0f, 35, 0.48f, 17, { 0, 100, 0, 0, 0 } },
+		{ "강도", 800, 16.0f, 40, 0.44f, 10, { 0, 0, 100, 0, 0 } },
+		{ "살인 사건", 850, 15.0f, 45, 0.38f, 20, { 20, 25, 10, 30, 15 } }
 	} };
 
 	StageConfig soloConfig(int caseNumber, bool borderless)
@@ -41,124 +35,6 @@ namespace
 		auto config = Stage::createPvPStage(borderless);
 		config.name = "2인 추격전";
 		return config;
-	}
-
-	class StoryGimmick
-	{
-	public:
-		virtual ~StoryGimmick() = default;
-		virtual bool activate(Player& player, std::mt19937& rng) = 0;
-		virtual std::string_view notice() const = 0;
-		virtual int update(float, Player&, int) { return 0; }
-		virtual float scoreLockRemaining() const { return 0.0f; }
-	};
-
-	class HoldTheft final : public StoryGimmick
-	{
-		bool activate(Player& player, std::mt19937&) override { return player.stealHoldBlock(); }
-		std::string_view notice() const override { return "소매치기가 홀드 블록을 가져갔다!"; }
-	};
-
-	class FalsePreview final : public StoryGimmick
-	{
-		bool activate(Player& player, std::mt19937& rng) override { return player.fakeNextPreview(rng); }
-		std::string_view notice() const override { return "다음 블록 정보가 수상하다!"; }
-	};
-
-	class HostageMarker final : public IBlockEffect
-	{
-	public:
-		void onDestroy(Player&, GameManager&, int, int) override { rescued_ = true; }
-		std::string getName() const override { return "HOSTAGE"; }
-		Color getTintColor() const override { return Color::Yellow; }
-		const char* getCellGlyph() const override { return "H!"; }
-		bool wasRescued() const { return rescued_; }
-
-	private:
-		bool rescued_ = false;
-	};
-
-	class HostageRescue final : public StoryGimmick
-	{
-	public:
-		bool activate(Player& player, std::mt19937& rng) override
-		{
-			if (marker_)
-			{
-				return false;
-			}
-			auto marker = std::make_shared<HostageMarker>();
-			if (!player.markHostage(marker, rng))
-			{
-				return false;
-			}
-			marker_ = std::move(marker);
-			remaining_ = kHostageLimit;
-			return true;
-		}
-
-		std::string_view notice() const override { return "인질이 나타났다. H!가 있는 줄을 지워라!"; }
-
-		int update(float dt, Player& player, int target) override
-		{
-			if (!marker_)
-			{
-				return 0;
-			}
-			if (marker_->wasRescued())
-			{
-				marker_.reset();
-				player.setBanner("인질 구출!");
-				return 0;
-			}
-			remaining_ -= dt;
-			if (remaining_ > 0.0f)
-			{
-				return 0;
-			}
-			player.removeHostageMarker(*marker_);
-			marker_.reset();
-			return target / 5;
-		}
-
-		float scoreLockRemaining() const override
-		{
-			return marker_ && !marker_->wasRescued() ? remaining_ : 0.0f;
-		}
-
-	private:
-		std::shared_ptr<HostageMarker> marker_;
-		float remaining_ = 0.0f;
-	};
-
-	class RotationLock final : public StoryGimmick
-	{
-		bool activate(Player& player, std::mt19937&) override { return player.lockCurrentRotation(); }
-		std::string_view notice() const override { return "현재 블록은 회전할 수 없다!"; }
-	};
-
-	class RisingLayer final : public StoryGimmick
-	{
-		bool activate(Player& player, std::mt19937&) override
-		{
-			player.receivePermanentLine();
-			return true;
-		}
-		std::string_view notice() const override { return "삭제할 수 없는 층이 올라왔다!"; }
-	};
-
-	std::unique_ptr<StoryGimmick> makeGimmick(GimmickKind kind)
-	{
-		switch (kind)
-		{
-		case GimmickKind::HoldTheft: return std::make_unique<HoldTheft>();
-		case GimmickKind::FalsePreview: return std::make_unique<FalsePreview>();
-		case GimmickKind::Hostage: return std::make_unique<HostageRescue>();
-		case GimmickKind::RotationLock: return std::make_unique<RotationLock>();
-		case GimmickKind::PermanentLine: return std::make_unique<RisingLayer>();
-		}
-		assert(false);
-		return {};
 	}
 
 	class PursuitStage : public Stage
@@ -195,7 +71,7 @@ namespace
 			{
 				if (settings_.gimmickWeights[i] > 0)
 				{
-					gimmicks_[i] = makeGimmick(static_cast<GimmickKind>(i));
+					gimmicks_[i] = makeStoryGimmick(static_cast<StoryGimmickKind>(i));
 				}
 			}
 		}
@@ -218,12 +94,7 @@ namespace
 
 			std::discrete_distribution<size_t> choose(settings_.gimmickWeights.begin(),
 				settings_.gimmickWeights.end());
-			auto& gimmick = gimmicks_[choose(rng_)];
-			if (gimmick->activate(player, rng_))
-			{
-				status_.notice = gimmick->notice();
-				status_.noticeTime = 2.0f;
-			}
+			publish(gimmicks_[choose(rng_)]->activate(player, rng_));
 		}
 
 		void onUpdate(float dt, GameManager& game) override
@@ -232,43 +103,77 @@ namespace
 			status_.hostageTime = scoreLockRemaining();
 			if (!player.isAlive() || isCleared(game))
 			{
+				if (status_.fear.cue == PursuitCue::FearWarning)
+				{
+					status_.fear = {};
+				}
 				return;
 			}
 
-			status_.noticeTime = std::max(0.0f, status_.noticeTime - dt);
-			for (auto& gimmick : gimmicks_)
-			{
-				if (gimmick)
-				{
-					const int penalty = gimmick->update(dt, player, status_.target);
-					if (penalty > 0)
-					{
-						addScore(-penalty);
-						status_.notice = "구출 시간 초과. 추격 점수 감소!";
-						status_.noticeTime = 2.0f;
-					}
-				}
-			}
-			status_.hostageTime = scoreLockRemaining();
-
+			status_.notice.timeLeft = std::max(0.0f, status_.notice.timeLeft - dt);
+			status_.fear.timeLeft = std::max(0.0f, status_.fear.timeLeft - dt);
 			escapeTimer_ += dt;
 			while (escapeTimer_ >= settings_.escapeInterval)
 			{
 				escapeTimer_ -= settings_.escapeInterval;
 				addScore(-settings_.escapePenalty);
 			}
+
+			for (auto& gimmick : gimmicks_)
+			{
+				if (status_.score == 0 || !player.isAlive())
+				{
+					break;
+				}
+				if (gimmick)
+				{
+					const auto result = gimmick->update(dt, player, status_.target);
+					addScore(-result.scorePenalty);
+					publish(result.cue);
+				}
+			}
+			if (status_.score == 0 && status_.fear.cue == PursuitCue::FearWarning)
+			{
+				status_.fear = {};
+			}
+			status_.hostageTime = scoreLockRemaining();
 		}
 
 	private:
+		void publish(PursuitCue cue)
+		{
+			switch (cue)
+			{
+			case PursuitCue::None:
+				break;
+			case PursuitCue::FearWarning:
+				status_.fear = { cue, FearRiseDelay };
+				break;
+			case PursuitCue::FearRise:
+				status_.fear = { cue, kNoticeDuration };
+				break;
+			default:
+				status_.notice = { cue, kNoticeDuration };
+				break;
+			}
+		}
+
 		float scoreLockRemaining() const
 		{
-			const auto& hostage = gimmicks_[static_cast<size_t>(GimmickKind::Hostage)];
-			return hostage ? hostage->scoreLockRemaining() : 0.0f;
+			float remaining = 0.0f;
+			for (const auto& gimmick : gimmicks_)
+			{
+				if (gimmick)
+				{
+					remaining = std::max(remaining, gimmick->scoreLockRemaining());
+				}
+			}
+			return remaining;
 		}
 
 		const StoryCase& settings_;
 		std::mt19937 rng_;
-		std::array<std::unique_ptr<StoryGimmick>, 5> gimmicks_;
+		std::array<std::unique_ptr<StoryGimmick>, StoryGimmickCount> gimmicks_;
 		float escapeTimer_ = 0.0f;
 	};
 

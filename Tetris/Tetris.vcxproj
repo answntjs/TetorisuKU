@@ -224,9 +224,11 @@
     <ClInclude Include="Domain\_Player.h" />
     <ClInclude Include="Domain\_PursuitStage.h" />
     <ClInclude Include="Domain\_Stage.h" />
+    <ClInclude Include="Domain\_StoryGimmick.h" />
     <ClInclude Include="IO\_Console.h" />
     <ClInclude Include="IO\_InputHandler.h" />
     <ClInclude Include="IO\_Renderer.h" />
+    <ClInclude Include="IO\_StoryPresentation.h" />
     <ClInclude Include="IO\_TextBox.h" />
     <ClInclude Include="Scene\_GameOverScene.h" />
     <ClInclude Include="Scene\_PauseScene.h" />
@@ -244,9 +246,11 @@
     <ClCompile Include="Domain\Player.cpp" />
     <ClCompile Include="Domain\PursuitStage.cpp" />
     <ClCompile Include="Domain\Stage.cpp" />
+    <ClCompile Include="Domain\StoryGimmick.cpp" />
     <ClCompile Include="IO\Console.cpp" />
     <ClCompile Include="IO\InputHandler.cpp" />
     <ClCompile Include="IO\Renderer.cpp" />
+    <ClCompile Include="IO\StoryPresentation.cpp" />
     <ClCompile Include="IO\TextBox.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Scene\GameOverScene.cpp" />

@@ -51,6 +51,11 @@ void GameOverScene::update(float)
 
 void GameOverScene::render(Console& console, const Renderer& renderer) const
 {
+	if (showsPromotion())
+	{
+		renderer.renderStoryPromotion(console, message_);
+		return;
+	}
 	std::string body = message_ + "\n\n" + pursuitSummary_;
 	for (const auto& stats : stats_)
 	{
@@ -59,15 +64,11 @@ void GameOverScene::render(Console& console, const Renderer& renderer) const
 			body += stats + "\n";
 		}
 	}
-	if (mode_ == GameMode::StorySolo && victory_)
-	{
-		body += "\n경찰  \"이제 모두 안심할 수 있어.\"\n";
-	}
 	body += "\n[R] 다시 하기    [ENTER / SPACE] 타이틀";
 
 	if (isStoryMode(mode_))
 	{
-		console.fillRect(14, 8, 92, 19, ' ', Color::White, Color::Black);
+		console.fillRect(14, 10, 92, 17, ' ', Color::White, Color::Black);
 		renderer.drawStoryPortrait(console, 17, 12, 0);
 		renderer.drawStoryPortrait(console, 91, 12, mode_ == GameMode::StorySolo ? storyCase_ : StoryCaseCount);
 	}

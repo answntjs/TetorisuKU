@@ -1,4 +1,5 @@
 #include "../Core/_Game.h"
+#include "../Domain/_PursuitStage.h"
 #include "../IO/_TextBox.h"
 #include "_PlayScene.h"
 #include "_TitleScene.h"
@@ -50,16 +51,21 @@ void TitleScene::handleInput(const InputHandler &input) {
     } else {
       const bool story = menu_ == Menu::Story;
       const auto mode = story ? kStoryModes[selection_] : kClassicModes[selection_];
+      const int level = mode == GameMode::StorySolo ? storyStartLevel_
+                        : story ? 1 : startLevel_;
       game_.changeScene(std::make_unique<PlayScene>(
-          game_, mode, story ? 1 : startLevel_, !story && borderless_));
+          game_, mode, level, !story && borderless_));
     }
-  } else if (menu_ == Menu::Classic) {
-    if (input.isKeyPressed('B')) {
-      borderless_ = !borderless_;
-    } else if (selection_ == 0 && (input.isKeyPressed(VK_LEFT, true) || input.isKeyPressed('A', true))) {
-      startLevel_ = std::max(1, startLevel_ - 1);
-    } else if (selection_ == 0 && (input.isKeyPressed(VK_RIGHT, true) || input.isKeyPressed('D', true))) {
-      startLevel_ = std::min(8, startLevel_ + 1);
+  } else if (menu_ == Menu::Classic && input.isKeyPressed('B')) {
+    borderless_ = !borderless_;
+  } else if (menu_ != Menu::Main && selection_ == 0) {
+    const bool story = menu_ == Menu::Story;
+    int& level = story ? storyStartLevel_ : startLevel_;
+    const int lastLevel = story ? StoryCaseCount : 8;
+    if (input.isKeyPressed(VK_LEFT, true) || input.isKeyPressed('A', true)) {
+      level = std::max(1, level - 1);
+    } else if (input.isKeyPressed(VK_RIGHT, true) || input.isKeyPressed('D', true)) {
+      level = std::min(lastLevel, level + 1);
     }
   }
 }
@@ -96,6 +102,10 @@ void TitleScene::render(Console &console, const Renderer &) const {
     addOptions(std::array{"스토리 모드", "일반 모드"});
   } else if (menu_ == Menu::Story) {
     addOptions(std::array{"1인 수사", "2인 경찰과 도둑"});
+    if (selection_ == 0) {
+      menuText += "\n시작 사건 (좌우)  " + std::to_string(storyStartLevel_)
+                  + " / " + std::to_string(StoryCaseCount) + "  " + getStoryCase(storyStartLevel_).title;
+    }
   } else {
     addOptions(std::array{"싱글 플레이", "로컬 2P", "봇 대전", "방해 줄 생존"});
     if (selection_ == 0) {

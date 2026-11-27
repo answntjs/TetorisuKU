@@ -1,91 +1,34 @@
 #include "_Renderer.h"
+#include "_StoryPresentation.h"
 #include "_TextBox.h"
 #include "../Domain/_PursuitStage.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
-#include <string_view>
-
-namespace
-{
-	using Portrait = std::array<std::string_view, 12>;
-	constexpr std::array<Portrait, StoryCaseCount + 1> kPortraits{{
-		// Police
-		{{ "............", "....BBBB....", "...BBYYBB...", "..BBBBBBBB..",
-		   "..KKKKKKKK..", "...SKSSKS...", "...SSSSSS...", "....SSSS....",
-		   "...BBWWBB...", "..BBBYBBBB..", "..BBBBBBBB..", "..KKKKKKKK.." }},
-		// Red Cap
-		{{ "............", "....RRR.....", "...RRRRRR...", "..RRRRRRRR..",
-		   "..RRKKKK....", "...SKSSKS...", "...SSSSSS...", "....SSSS....",
-		   "...RRKKRR...", "..RRRRRRRR..", "..RKKRRKKR..", "..KKKKKKKK.." }},
-		// Silver Hand
-		{{ "............", "....GGGG....", "...GGGGGG...", "..GGGKKGGG..",
-		   "..GGSSSSGG..", "...SKSSKS...", "...KKKKKK...", "....KKKK....",
-		   "...GGKKGG...", "..GGGGGGGG..", "..GGGGGWWG..", "..KKKKKKKK.." }},
-		// False Gentleman
-		{{ "....KKKK....", "....KVVK....", "....KKKK....", "..KKKKKKKK..",
-		   "...SSSSSS...", "...KWKSKW...", "...SSWSSS...", "....SSSS....",
-		   "...VVWVVV...", "..VVWYWVVV..", "..VVVYVVVV..", "..KKKKKKKK.." }},
-		// Golden Mask
-		{{ "............", "....KKKK....", "...KKKKKK...", "..KKYYYYKK..",
-		   "..KYYKKYYK..", "..KYWYYWYK..", "...YYYYYY...", "....YYYY....",
-		   "...GGKKGG...", "..GGYYYYGG..", "..GGGGGGGG..", "..KKKKKKKK.." }},
-		// Black Shadow
-		{{ "............", "....VVVV....", "...VVKKVV...", "..VVKKKKVV..",
-		   "..VKKKKKKV..", "..VKWKKWKV..", "..VKKKKKKV..", "...VVKKVV...",
-		   "...KVVVVK...", "..KKKVVKKK..", "..KKKKKKKK..", "..VVVVVVVV.." }}
-	}};
-
-	Color portraitColor(char pixel)
-	{
-		switch (pixel)
-		{
-		case 'B': return Color::Blue;
-		case 'Y': return Color::Yellow;
-		case 'S': return Color::DarkYellow;
-		case 'W': return Color::White;
-		case 'R': return Color::Red;
-		case 'G': return Color::Gray;
-		case 'K': return Color::DarkGray;
-		case 'V': return Color::Violet;
-		default: return Color::Black;
-		}
-	}
-}
 
 void Renderer::drawStoryPortrait(Console& console, int x, int y, int portrait) const
 {
-	const auto& pixels = kPortraits[std::clamp(portrait, 0, StoryCaseCount)];
-	for (size_t row = 0; row < pixels.size(); row += 2)
-	{
-		for (size_t col = 0; col < pixels[row].size(); ++col)
-		{
-			console.drawGlyph(x + static_cast<int>(col), y + static_cast<int>(row / 2),
-				"▀", 1, portraitColor(pixels[row][col]), portraitColor(pixels[row + 1][col]));
-		}
-	}
+	StoryPresentation::drawPortrait(console, x, y, portrait);
 }
 
-void Renderer::renderStoryBriefing(Console& console, const GameManager& gm, bool promotion) const
+void Renderer::renderStoryBriefing(Console& console, const GameManager& gm, bool handoff) const
 {
 	const bool solo = gm.getMode() == GameMode::StorySolo;
 	const int caseNumber = gm.getStage()->getConfig().stageNumber;
-	drawStoryPortrait(console, 16, 13, 0);
-	drawStoryPortrait(console, 92, 13, solo ? caseNumber : StoryCaseCount);
-	console.drawText(17, 20, solo ? "경찰" : "1P 경찰", Color::SkyBlue);
-	console.drawText(93, 20, solo ? "용의자" : "2P 도둑", Color::Violet);
+	drawStoryPortrait(console, 12, 12, 0);
+	drawStoryPortrait(console, 92, 12, solo ? caseNumber : StoryCaseCount);
+	console.drawText(17, 21, solo ? "형사" : "1P 경찰", Color::SkyBlue);
+	console.drawText(93, 21, solo ? "용의자" : "2P 도둑", Color::Violet);
 
 	std::string body;
 	if (solo)
 	{
-		const auto& suspect = getStoryCase(caseNumber);
-		if (promotion)
+		if (handoff)
 		{
-			body += "사건을 해결했다. 경찰이 진급해 새 사건을 맡는다.\n\n";
+			StoryPresentation::drawIcon(console, 17, 8, StoryPresentation::Icon::Arrest);
 		}
-		body += gm.getStage()->getConfig().name + "\n";
-		body += std::string(suspect.suspect) + "  \"" + suspect.dialogue + "\"\n\n";
-		body += "줄을 지우면 용의자와의 거리가 줄어든다.\n";
+		body = gm.getStage()->getConfig().name + "\n\n";
+		body += StoryPresentation::briefing(caseNumber, handoff);
+		body += "\n\n줄을 지우면 용의자와의 거리가 줄어든다.\n";
 		body += "체포 목표  " + std::to_string(gm.getStage()->getPursuitStatus()->target) + "점\n";
 	}
 	else
@@ -99,50 +42,92 @@ void Renderer::renderStoryBriefing(Console& console, const GameManager& gm, bool
 	body += "\n[ENTER / SPACE] 추격 시작";
 
 	TextBox box(31, 9, 56, body, BorderStyle::Bold);
-	box.setTitle(promotion ? "진급" : solo ? "수사 브리핑" : "경찰과 도둑");
+	box.setTitle(handoff ? "다음 사건" : solo ? "수사 브리핑" : "경찰과 도둑");
 	box.setColors(Color::White, Color::SkyBlue, Color::Black, true);
 	box.draw(console);
 }
 
-void Renderer::drawPursuit(Console& console, const PursuitStatus& pursuit, bool duel) const
+void Renderer::renderStoryPromotion(Console& console, const std::string& result) const
 {
-	constexpr int trackStart = 39;
-	constexpr int trackLength = 41;
+	drawStoryPortrait(console, 51, 3, 0);
+	StoryPresentation::drawIcon(console, 56, 12, StoryPresentation::Icon::Badge);
+
+	std::string body = result + "\n\n팀장  \"";
+	body += StoryPresentation::Promotion;
+	body += "\"\n\n[ENTER / SPACE] 타이틀    [R] 처음부터";
+	TextBox box(31, 17, 56, body, BorderStyle::Bold);
+	box.setTitle("포상 진급식");
+	box.setColors(Color::White, Color::Yellow, Color::Black, true);
+	box.draw(console);
+}
+
+void Renderer::drawPursuit(Console& console, const PursuitStatus& pursuit, const GameManager& gm) const
+{
+	using StoryPresentation::Icon;
+	const bool duel = gm.getMode() == GameMode::StoryDuel;
+	const int caseNumber = gm.getStage()->getConfig().stageNumber;
 	const int gap = pursuit.target - pursuit.score;
-	const int marker = trackStart + 1 + gap * (trackLength - 3) / pursuit.target;
-	console.drawText(4, 3, "경찰과 도둑의 거리", Color::SkyBlue);
-	console.fillRect(trackStart, 4, trackLength, 1, '.', Color::DarkGray);
-	console.drawChar(trackStart, 4, '[', Color::SkyBlue);
-	console.drawChar(trackStart + trackLength - 1, 4, ']', Color::Violet);
-	console.drawChar(trackStart + 1, 3, 'P', Color::SkyBlue);
-	console.drawChar(marker, 4, 'T', Color::Violet);
-	console.drawText(84, 3, "추격 " + std::to_string(pursuit.score) + " / "
+	constexpr int policeX = 38;
+	constexpr int nearestSuspectX = policeX + 7;
+	constexpr int farthestSuspectX = 74;
+	const int marker = nearestSuspectX + gap * (farthestSuspectX - nearestSuspectX) / pursuit.target;
+	console.drawText(4, 2, duel ? "경찰과 도둑의 거리" : "용의자와의 거리", Color::SkyBlue);
+	console.fillRect(policeX + 2, 5, 40, 1, '.', Color::DarkGray);
+	console.fillRect(policeX + 3, 5, marker - policeX, 1, '-', Color::Violet);
+	StoryPresentation::drawIcon(console, policeX, 2, Icon::Police);
+	StoryPresentation::drawIcon(console, marker, 2, gap == 0 ? Icon::Arrest : Icon::Suspect,
+		duel ? StoryCaseCount : caseNumber);
+	console.drawText(84, 2, "추격 " + std::to_string(pursuit.score) + " / "
 		+ std::to_string(pursuit.target), Color::Yellow);
-	console.drawText(84, 4, "남은 거리 " + std::to_string(gap), Color::Gray);
+	console.drawText(84, 4, gap == 0 ? "체포" : "남은 거리 " + std::to_string(gap), Color::Gray);
 
 	if (duel)
 	{
 		if (pursuit.attackTime[0] > 0.0f)
 		{
 			const int travel = static_cast<int>((0.8f - pursuit.attackTime[0]) * 26.0f);
-			console.drawText(trackStart + travel, 5, (travel % 4 < 2) ? "*|==>" : "+|==>", Color::SkyBlue);
-			console.drawText(4, 5, "경찰 차단선", Color::SkyBlue);
+			console.drawText(policeX + travel, 6, (travel % 4 < 2) ? "*|==>" : "+|==>", Color::SkyBlue);
+			console.drawText(4, 6, "경찰 차단선", Color::SkyBlue);
 		}
 		if (pursuit.attackTime[1] > 0.0f)
 		{
 			const int travel = static_cast<int>((0.8f - pursuit.attackTime[1]) * 26.0f);
-			console.drawText(trackStart + trackLength - 5 - travel, 6, "<-[]", Color::Violet);
-			console.drawText(84, 6, "도둑의 투척", Color::Violet);
+			console.drawText(farthestSuspectX - travel, 7, "<-[]", Color::Violet);
+			console.drawText(84, 7, "도둑의 투척", Color::Violet);
+		}
+		return;
+	}
+
+	if (const auto* current = gm.getPlayer(0)->getCurrentBlock(); current && current->isRotationLocked())
+	{
+		StoryPresentation::drawIcon(console, 4, 3, Icon::RotationLock);
+		console.drawText(12, 4, "회전 불가", Color::Yellow);
+	}
+	if (pursuit.hostageTime > 0.0f)
+	{
+		console.drawText(4, 5, "인질  " + std::to_string(static_cast<int>(std::ceil(pursuit.hostageTime)))
+			+ "초  |  H! 줄 삭제", Color::Yellow);
+	}
+	if (pursuit.notice.timeLeft > 0.0f)
+	{
+		const auto line = StoryPresentation::dialogue(pursuit.notice.cue, caseNumber);
+		if (pursuit.notice.cue == PursuitCue::HostageExpired)
+		{
+			console.drawText(4, 6, std::string(line), Color::Yellow);
+		}
+		else
+		{
+			console.drawText(4, 6, "용의자  \"" + std::string(line) + "\"", Color::Violet);
 		}
 	}
-	else if (pursuit.hostageTime > 0.0f)
+	if (pursuit.fear.timeLeft > 0.0f)
 	{
-		console.drawText(4, 6, "인질 구출  " + std::to_string(static_cast<int>(std::ceil(pursuit.hostageTime)))
-			+ "초  |  H!가 있는 줄을 지우세요", Color::Yellow);
-	}
-	if (pursuit.noticeTime > 0.0f)
-	{
-		console.drawText(4, 7, std::string(pursuit.notice), Color::Yellow);
+		console.drawText(4, 7, "용의자  \"" + std::string(StoryPresentation::FearOpening) + "\"", Color::Violet);
+		if (pursuit.fear.cue == PursuitCue::FearRise)
+		{
+			console.drawText(12, 8, std::string(StoryPresentation::dialogue(pursuit.fear.cue, caseNumber)),
+				Color::Red);
+		}
 	}
 }
 
@@ -167,7 +152,7 @@ void Renderer::renderGame(Console& console, const GameManager& gm) const
 		console.drawText(98, 1, "[ESC] PAUSE", Color::DarkGray);
 		if (const auto* pursuit = stage->getPursuitStatus())
 		{
-			drawPursuit(console, *pursuit, gm.getMode() == GameMode::StoryDuel);
+			drawPursuit(console, *pursuit, gm);
 		}
 	}
 
@@ -182,7 +167,7 @@ void Renderer::renderGame(Console& console, const GameManager& gm) const
 
 	if (gm.getPlayerCount() == 1)
 	{
-		TextBox guide(78, isStoryMode(gm.getMode()) ? 9 : 3, 32,
+		TextBox guide(78, gm.getPlayer(0)->getViewport().originY, 32,
 			"LEFT/RIGHT : Move\n"
 			"UP / Z     : Rotate CW / CCW\n"
 			"DOWN       : Soft Drop\n"
@@ -329,10 +314,6 @@ void Renderer::renderPlayer(Console& console, const Player& player, const Stage*
 	if (!player.isAlive())
 	{
 		console.drawText(ox + 6, oy + 9, "GAME OVER", Color::Red, Color::Black);
-	}
-	else if (player.getCurrentBlock() && player.getCurrentBlock()->isRotationLocked())
-	{
-		console.drawText(ox + 1, oy + vh + 2, "!! 회전 불가", Color::Yellow);
 	}
 }
 
