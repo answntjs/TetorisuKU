@@ -109,6 +109,10 @@ bool Board::canPlace(const Block& block, int dx, int dy, int testAngle) const
 
 bool Board::tryRotate(Block& block, bool clockwise) const
 {
+	if (block.isRotationLocked())
+	{
+		return false;
+	}
 	if (block.getShape() == BlockType::O)
 	{
 		block.rotate_block(clockwise);
@@ -221,7 +225,7 @@ LineClearResult Board::clearFullLines(bool isTSpin)
 			{
 				if (grid_[r][c].effect)
 				{
-					result.triggeredEffects.push_back(grid_[r][c].effect);
+					result.triggeredEffects.push_back({ grid_[r][c].effect, r, c });
 				}
 			}
 		}
@@ -252,8 +256,35 @@ bool Board::pushGarbageLines(int lineCount, int emptyCount, std::mt19937& rng)
 	}
 
 	const int totalH = getTotalHeight();
-	const int clampedEmpty = std::clamp(emptyCount, 1, width_ - 1);
+	const int clampedEmpty = std::clamp(emptyCount, 1, std::max(1, width_ - 1));
+	const bool topOverflow = shiftRowsUp(lineCount);
 
+	std::vector<int> cols(width_);
+	std::iota(cols.begin(), cols.end(), 0);
+
+	for (int r = std::max(0, totalH - lineCount); r < totalH; ++r)
+	{
+		grid_[r].assign(width_, Cell{ true, Color::DarkGray, true, nullptr });
+		std::shuffle(cols.begin(), cols.end(), rng);
+		for (int k = 0; k < clampedEmpty; ++k)
+		{
+			grid_[r][cols[k]] = Cell{};
+		}
+	}
+
+	return !topOverflow && !isTopOut();
+}
+
+bool Board::pushPermanentLine()
+{
+	const bool topOverflow = shiftRowsUp(1);
+	grid_.back().assign(width_, Cell{ true, Color::DarkRed, false, nullptr });
+	return !topOverflow && !isTopOut();
+}
+
+bool Board::shiftRowsUp(int lineCount)
+{
+	const int totalH = getTotalHeight();
 	bool topOverflow = false;
 	const int checkRows = std::min(lineCount, totalH);
 	for (int r = 0; r < checkRows; ++r)
@@ -281,21 +312,48 @@ bool Board::pushGarbageLines(int lineCount, int emptyCount, std::mt19937& rng)
 		}
 	}
 
-	std::vector<int> cols(width_);
-	std::iota(cols.begin(), cols.end(), 0);
+	return topOverflow;
+}
 
-	const int startRow = std::max(0, totalH - lineCount);
-	for (int r = startRow; r < totalH; ++r)
+bool Board::markHostageCell(const std::shared_ptr<IBlockEffect>& marker, std::mt19937& rng)
+{
+	std::vector<int> candidates;
+	for (int y = getTotalHeight() - 1; y >= hiddenRows_; --y)
 	{
-		grid_[r].assign(width_, Cell{ true, Color::DarkGray, true, nullptr });
-		std::shuffle(cols.begin(), cols.end(), rng);
-		for (int k = 0; k < clampedEmpty; ++k)
+		auto& row = grid_[y];
+		if (std::any_of(row.begin(), row.end(), [](const Cell& cell) { return !cell.clearable; }))
 		{
-			grid_[r][cols[k]] = Cell{};
+			continue;
+		}
+		for (int x = 0; x < width_; ++x)
+		{
+			if (row[x].occupied && !row[x].effect)
+			{
+				candidates.push_back(x);
+			}
+		}
+		if (!candidates.empty())
+		{
+			std::uniform_int_distribution<size_t> choose(0, candidates.size() - 1);
+			row[candidates[choose(rng)]].effect = marker;
+			return true;
 		}
 	}
+	return false;
+}
 
-	return !topOverflow && !isTopOut();
+void Board::removeCellEffect(const IBlockEffect& marker)
+{
+	for (auto& row : grid_)
+	{
+		for (auto& cell : row)
+		{
+			if (cell.effect.get() == &marker)
+			{
+				cell.effect.reset();
+			}
+		}
+	}
 }
 
 int Board::getGhostY(const Block& block) const

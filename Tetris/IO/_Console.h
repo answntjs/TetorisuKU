@@ -6,6 +6,10 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
 
 class Console
 {

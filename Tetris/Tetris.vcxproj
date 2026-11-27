@@ -222,6 +222,7 @@
     <ClInclude Include="Domain\_Board.h" />
     <ClInclude Include="Domain\_BotPlayer.h" />
     <ClInclude Include="Domain\_Player.h" />
+    <ClInclude Include="Domain\_PursuitStage.h" />
     <ClInclude Include="Domain\_Stage.h" />
     <ClInclude Include="IO\_Console.h" />
     <ClInclude Include="IO\_InputHandler.h" />
@@ -241,6 +242,7 @@
     <ClCompile Include="Domain\Board.cpp" />
     <ClCompile Include="Domain\BotPlayer.cpp" />
     <ClCompile Include="Domain\Player.cpp" />
+    <ClCompile Include="Domain\PursuitStage.cpp" />
     <ClCompile Include="Domain\Stage.cpp" />
     <ClCompile Include="IO\Console.cpp" />
     <ClCompile Include="IO\InputHandler.cpp" />

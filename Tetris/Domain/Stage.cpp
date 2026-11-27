@@ -54,7 +54,7 @@ StageConfig Stage::createOriginalStage(int stageNumber, bool borderless)
 		int clearLine;
 	};
 
-	constexpr std::array<OriginalData, 10> kStages = { {
+	constexpr std::array<OriginalData, 8> kStages = { {
 		{ 40, 20, 20 },
 		{ 38, 18, 20 },
 		{ 35, 18, 20 },
@@ -62,9 +62,7 @@ StageConfig Stage::createOriginalStage(int stageNumber, bool borderless)
 		{ 25, 16, 20 },
 		{ 20, 14, 20 },
 		{ 15, 14, 20 },
-		{ 10, 13, 20 },
-		{  6, 12, 20 },
-		{  4, 11, 99999 }
+		{ 10, 13,  0 }
 	} };
 
 	const int idx = std::clamp(stageNumber - 1, 0, static_cast<int>(kStages.size()) - 1);

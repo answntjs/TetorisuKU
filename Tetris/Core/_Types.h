@@ -3,12 +3,6 @@
 #include <memory>
 #include <vector>
 
-#ifndef NOMINMAX
-#define NOMINMAX // Windows.h에서의 max, min / std::max, std::min 사용시
-                 // 충돌방지
-#endif
-#include <Windows.h>
-
 inline constexpr const char *kGameTitle = "TetorisuKU(가제)"; // 제목
 
 class Player;
@@ -45,41 +39,29 @@ enum class BlockType : int {
   Count = 7
 };
 
-enum class GameMode { Single, PvP, VsBot, PvE };
+enum class GameMode { Single, PvP, VsBot, PvE, StorySolo, StoryDuel };
 
-struct KeyBinding {
-  int rotateCW = VK_UP; // CW means Clockwise
-  int rotateCCW = 'Z';  // CCW means Counter-Clockwise
-  int moveLeft = VK_LEFT;
-  int moveRight = VK_RIGHT;
-  int softDrop = VK_DOWN;
-  int hardDrop = VK_SPACE;
-  int hold = VK_LSHIFT;
-  int useItem = 'E';
-
-  static KeyBinding SingleDefault() {
-    return {VK_UP, 'Z', VK_LEFT, VK_RIGHT, VK_DOWN, VK_SPACE, VK_LSHIFT, 'E'};
-  }
-
-  static KeyBinding Player1Default() {
-    return {'W', 'Q', 'A', 'D', 'S', VK_SPACE, VK_LSHIFT, 'E'};
-  }
-
-  static KeyBinding Player2Default() {
-    return {VK_UP,   VK_OEM_2,  VK_LEFT,   VK_RIGHT,
-            VK_DOWN, VK_RSHIFT, VK_RETURN, VK_RCONTROL};
-  }
-};
+constexpr bool isStoryMode(GameMode mode)
+{
+  return mode == GameMode::StorySolo || mode == GameMode::StoryDuel;
+}
 
 struct Viewport {
   int originX = 0;
   int originY = 0;
 };
 
+struct ClearedBlockEffect {
+  std::shared_ptr<IBlockEffect> effect;
+  int row;
+  int col;
+};
+
 struct LineClearResult {
   int clearedLines = 0;
+  int lineClearScore = 0;
   int comboCount = 0;
   bool isTSpin = false;
   bool isBackToBack = false;
-  std::vector<std::shared_ptr<IBlockEffect>> triggeredEffects;
+  std::vector<ClearedBlockEffect> triggeredEffects;
 };

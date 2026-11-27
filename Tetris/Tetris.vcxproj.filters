@@ -49,6 +49,9 @@
     <ClInclude Include="Domain\_Player.h">
       <Filter>리소스 파일\Domain</Filter>
     </ClInclude>
+    <ClInclude Include="Domain\_PursuitStage.h">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClInclude>
     <ClInclude Include="Domain\_Stage.h">
       <Filter>리소스 파일\Domain</Filter>
     </ClInclude>
@@ -100,6 +103,9 @@
       <Filter>리소스 파일\Domain</Filter>
     </ClCompile>
     <ClCompile Include="Domain\Player.cpp">
+      <Filter>리소스 파일\Domain</Filter>
+    </ClCompile>
+    <ClCompile Include="Domain\PursuitStage.cpp">
       <Filter>리소스 파일\Domain</Filter>
     </ClCompile>
     <ClCompile Include="Domain\Stage.cpp">

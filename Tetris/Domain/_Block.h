@@ -25,6 +25,8 @@ public:
 	int getX() const { return pos_.first; }
 	int getY() const { return pos_.second; }
 	Color getColor() const { return color_; }
+	bool isRotationLocked() const { return rotationLocked_; }
+	void lockRotation() { rotationLocked_ = true; }
 	bool wasLastActionRotate() const { return lastActionWasRotate_; }
 	std::shared_ptr<IBlockEffect> getDestroyEffect() const { return destroyEffect_; }
 
@@ -42,5 +44,6 @@ private:
 	std::pair<int, int> pos_{ 3, 2 };
 	Color color_;
 	bool lastActionWasRotate_ = false;
+	bool rotationLocked_ = false;
 	std::shared_ptr<IBlockEffect> destroyEffect_;
 };

@@ -7,6 +7,30 @@
 #endif
 #include <Windows.h>
 
+struct KeyBinding
+{
+	int rotateCW = VK_UP;
+	int rotateCCW = 'Z';
+	int moveLeft = VK_LEFT;
+	int moveRight = VK_RIGHT;
+	int softDrop = VK_DOWN;
+	int hardDrop = VK_SPACE;
+	int hold = VK_LSHIFT;
+	int useItem = 'E';
+
+	static KeyBinding SingleDefault() { return {}; }
+
+	static KeyBinding Player1Default()
+	{
+		return { 'W', 'Q', 'A', 'D', 'S', VK_SPACE, VK_LSHIFT, 'E' };
+	}
+
+	static KeyBinding Player2Default()
+	{
+		return { VK_UP, VK_OEM_2, VK_LEFT, VK_RIGHT, VK_DOWN, VK_RSHIFT, VK_RETURN, VK_RCONTROL };
+	}
+};
+
 class InputHandler
 {
 public:

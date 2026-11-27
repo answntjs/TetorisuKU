@@ -5,6 +5,7 @@
 
 class GameManager;
 class Player;
+struct PursuitStatus;
 
 struct StageConfig
 {
@@ -28,6 +29,9 @@ public:
 	virtual void onStart(GameManager& gm);
 	virtual void onUpdate(float dt, GameManager& gm);
 	virtual void onLineClear(Player& player, const LineClearResult& result, GameManager& gm);
+	virtual void onBlockLocked(Player&, const LineClearResult&, GameManager&) {}
+	virtual void onAttackSent(int) {}
+	virtual const PursuitStatus* getPursuitStatus() const { return nullptr; }
 	virtual bool isCleared(const GameManager& gm) const;
 
 	const StageConfig& getConfig() const { return config_; }

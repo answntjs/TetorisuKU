@@ -1,55 +1,63 @@
 #include "_GameManager.h"
+#include "../Domain/_PursuitStage.h"
 #include <algorithm>
-#include <random>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
-void GameManager::setup(GameMode mode, int startLevel, bool borderless)
+void GameManager::setup(GameMode mode, int startLevel, bool borderless, unsigned int seed)
 {
 	mode_ = mode;
-	startLevel_ = std::clamp(startLevel, 1, 10);
+	startLevel_ = std::clamp(startLevel, 1, mode == GameMode::StorySolo ? StoryCaseCount : 8);
 	borderless_ = borderless;
 	players_.clear();
 	finished_ = false;
 	victory_ = false;
 	winnerIndex_ = -1;
 	endMessage_.clear();
+	storyRng_.seed(seed ^ 0x517cc1b7u);
 
-	const unsigned int sharedSeed = std::random_device{}();
-
-	if (mode_ == GameMode::Single)
+	switch (mode_)
 	{
+	case GameMode::Single:
 		stage_ = std::make_unique<Stage>(Stage::createOriginalStage(startLevel_, borderless_));
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, sharedSeed));
-	}
-	else if (mode_ == GameMode::PvE)
-	{
+			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, seed));
+		break;
+	case GameMode::PvE:
 		stage_ = std::make_unique<Stage>(Stage::createPvEStage(borderless_));
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, sharedSeed));
-	}
-	else if (mode_ == GameMode::PvP)
+			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, seed));
+		break;
+	case GameMode::PvP:
+	case GameMode::StoryDuel:
 	{
+		const bool story = mode_ == GameMode::StoryDuel;
+		const int top = story ? 9 : 3;
+		stage_ = story ? makeStoryDuelStage(borderless_)
+			: std::make_unique<Stage>(Stage::createPvPStage(borderless_));
+		players_.push_back(std::make_unique<Player>(story ? "1P 경찰" : "PLAYER 1",
+			KeyBinding::Player1Default(), Viewport{ 14, top }, borderless_, seed));
+		players_.push_back(std::make_unique<Player>(story ? "2P 도둑" : "PLAYER 2",
+			KeyBinding::Player2Default(), Viewport{ 72, top }, borderless_, seed));
+		break;
+	}
+	case GameMode::VsBot:
 		stage_ = std::make_unique<Stage>(Stage::createPvPStage(borderless_));
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::Player1Default(), Viewport{ 14, 3 }, borderless_, sharedSeed));
+			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 14, 3 }, borderless_, seed));
+		players_.push_back(std::make_unique<BotPlayer>("BOT", Viewport{ 72, 3 }, borderless_, seed));
+		break;
+	case GameMode::StorySolo:
+		stage_ = makeStorySoloStage(startLevel_, borderless_, storyRng_());
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 2", KeyBinding::Player2Default(), Viewport{ 72, 3 }, borderless_, sharedSeed));
-	}
-	else // GameMode::VsBot
-	{
-		stage_ = std::make_unique<Stage>(Stage::createPvPStage(borderless_));
-		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 14, 3 }, borderless_, sharedSeed));
-		players_.push_back(std::make_unique<BotPlayer>(
-			"BOT", Viewport{ 72, 3 }, borderless_, sharedSeed));
+			"경찰", KeyBinding::SingleDefault(), Viewport{ 36, 9 }, borderless_, seed));
+		break;
+	default:
+		throw std::invalid_argument("Unknown game mode");
 	}
 
-	if (stage_)
-	{
-		stage_->onStart(*this);
-	}
+	stage_->onStart(*this);
 }
 
 void GameManager::update(float dt, const InputHandler& input)
@@ -60,32 +68,37 @@ void GameManager::update(float dt, const InputHandler& input)
 	}
 
 	const float dropInterval = stage_->getConfig().dropIntervalSec;
+	const bool versus = mode_ == GameMode::PvP || mode_ == GameMode::VsBot || mode_ == GameMode::StoryDuel;
 	std::vector<std::pair<int, int>> pendingAttacks;
 
 	for (size_t i = 0; i < players_.size(); ++i)
 	{
-		if (!players_[i]->isAlive())
+		auto& player = *players_[i];
+		if (!player.isAlive())
 		{
 			continue;
 		}
 
 		LineClearResult result;
 		bool locked = false;
-		players_[i]->update(dt, input, dropInterval, result, locked);
-
-		if (locked && result.clearedLines > 0)
+		player.update(dt, input, dropInterval, result, locked);
+		if (!locked)
 		{
-			for (const auto& effect : result.triggeredEffects)
+			continue;
+		}
+
+		if (result.clearedLines > 0)
+		{
+			for (const auto& [effect, row, col] : result.triggeredEffects)
 			{
 				if (effect)
 				{
-					effect->onDestroy(*players_[i], *this, 0, 0);
+					effect->onDestroy(player, *this, row, col);
 				}
 			}
 
-			stage_->onLineClear(*players_[i], result, *this);
-
-			if (mode_ == GameMode::PvP || mode_ == GameMode::VsBot)
+			stage_->onLineClear(player, result, *this);
+			if (versus)
 			{
 				const int attack = computeAttackLines(result);
 				if (attack > 0)
@@ -94,86 +107,136 @@ void GameManager::update(float dt, const InputHandler& input)
 				}
 			}
 		}
+
+		stage_->onBlockLocked(player, result, *this);
 	}
 
-	// Apply attacks after every player has processed this frame's input.
 	for (const auto& [attackerIndex, attackLines] : pendingAttacks)
 	{
 		sendGarbageToOpponents(attackerIndex, attackLines, 1);
+		stage_->onAttackSent(attackerIndex);
 	}
 
 	stage_->onUpdate(dt, *this);
 
-	// Check stage progression or win/loss conditions
-	if (mode_ == GameMode::Single)
+	switch (mode_)
 	{
+	case GameMode::Single:
 		if (!players_[0]->isAlive())
 		{
-			finished_ = true;
-			victory_ = false;
-			endMessage_ = "GAME OVER";
+			finish(false, "GAME OVER");
 		}
 		else if (stage_->isCleared(*this))
 		{
-			const int nextStageNum = stage_->getConfig().stageNumber + 1;
-			if (nextStageNum <= 10)
-			{
-				stage_ = std::make_unique<Stage>(Stage::createOriginalStage(nextStageNum, borderless_));
-				stage_->onStart(*this);
-				players_[0]->resetStageClearedLines();
-				players_[0]->setBanner("STAGE " + std::to_string(nextStageNum) + "!");
-			}
-			else
-			{
-				finished_ = true;
-				victory_ = true;
-				endMessage_ = "ALL STAGES CLEAR!";
-			}
+			const int next = stage_->getConfig().stageNumber + 1;
+			stage_ = std::make_unique<Stage>(Stage::createOriginalStage(next, borderless_));
+			stage_->onStart(*this);
+			players_[0]->resetStageClearedLines();
+			players_[0]->setBanner(next == 8 ? "STAGE 8 - ENDLESS" : "STAGE " + std::to_string(next) + "!");
 		}
-	}
-	else if (mode_ == GameMode::PvE)
-	{
+		break;
+	case GameMode::PvE:
 		if (!players_[0]->isAlive())
 		{
-			finished_ = true;
-			victory_ = false;
-			endMessage_ = "SURVIVAL FAILED";
+			finish(false, "SURVIVAL FAILED");
 		}
 		else if (stage_->isCleared(*this))
 		{
-			finished_ = true;
-			victory_ = true;
-			endMessage_ = "SURVIVAL CLEAR!";
+			finish(true, "SURVIVAL CLEAR!");
 		}
-	}
-	else // PvP or VsBot
+		break;
+	case GameMode::StorySolo:
+		updateStoryProgress();
+		break;
+	case GameMode::StoryDuel:
 	{
-		int aliveCount = 0;
-		int lastAlive = -1;
-		for (size_t i = 0; i < players_.size(); ++i)
+		const auto& pursuit = *stage_->getPursuitStatus();
+		if (pursuit.score >= pursuit.target)
 		{
-			if (players_[i]->isAlive())
-			{
-				++aliveCount;
-				lastAlive = static_cast<int>(i);
-			}
+			finishVersus(0);
 		}
+		else if (pursuit.score == 0)
+		{
+			finishVersus(1);
+		}
+		else
+		{
+			checkBoardWinner();
+		}
+		break;
+	}
+	case GameMode::PvP:
+	case GameMode::VsBot:
+		checkBoardWinner();
+		break;
+	}
+}
 
-		if (aliveCount <= 1)
+void GameManager::updateStoryProgress()
+{
+	if (!players_[0]->isAlive())
+	{
+		finish(false, "수사 실패 - 보드가 가득 찼다");
+		return;
+	}
+	if (stage_->getPursuitStatus()->score == 0)
+	{
+		finish(false, "수사 실패 - 용의자가 달아났다");
+		return;
+	}
+	if (!stage_->isCleared(*this))
+	{
+		return;
+	}
+
+	const int next = stage_->getConfig().stageNumber + 1;
+	if (next > StoryCaseCount)
+	{
+		finish(true, "체포 성공 - 모든 사건 해결!");
+		return;
+	}
+
+	stage_ = makeStorySoloStage(next, borderless_, storyRng_());
+	players_[0]->reset(borderless_, storyRng_());
+	stage_->onStart(*this);
+}
+
+void GameManager::checkBoardWinner()
+{
+	int aliveCount = 0;
+	int lastAlive = -1;
+	for (size_t i = 0; i < players_.size(); ++i)
+	{
+		if (players_[i]->isAlive())
 		{
-			finished_ = true;
-			winnerIndex_ = lastAlive;
-			victory_ = (winnerIndex_ == 0);
-			if (winnerIndex_ >= 0)
-			{
-				endMessage_ = players_[winnerIndex_]->getName() + " WINS!";
-			}
-			else
-			{
-				endMessage_ = "DRAW!";
-			}
+			++aliveCount;
+			lastAlive = static_cast<int>(i);
 		}
 	}
+	if (aliveCount <= 1)
+	{
+		finishVersus(lastAlive);
+	}
+}
+
+void GameManager::finishVersus(int winner)
+{
+	if (mode_ == GameMode::StoryDuel)
+	{
+		const char* message = winner == 0 ? "체포 성공 - 경찰 승리"
+			: winner == 1 ? "도주 성공 - 도둑 승리" : "무승부";
+		finish(winner == 0, message, winner);
+		return;
+	}
+	finish(winner == 0, winner >= 0 ? players_[winner]->getName() + " WINS!" : "DRAW!", winner);
+}
+
+void GameManager::finish(bool victory, std::string message, int winner)
+{
+	finished_ = true;
+	victory_ = victory;
+	winnerIndex_ = winner;
+	endMessage_ = std::move(message);
 }
 
 void GameManager::sendGarbageToPlayer(int playerIndex, int nLines, int xHoles)

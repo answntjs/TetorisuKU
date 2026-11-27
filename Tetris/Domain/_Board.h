@@ -42,6 +42,10 @@ public:
 	LineClearResult clearFullLines(bool isTSpin);
 	bool pushGarbageLines(int lineCount, int emptyCount, std::mt19937& rng);
 
+	bool pushPermanentLine();
+	bool markHostageCell(const std::shared_ptr<IBlockEffect>& marker, std::mt19937& rng);
+	void removeCellEffect(const IBlockEffect& marker);
+
 	int getGhostY(const Block& block) const;
 	bool isTopOut() const;
 
@@ -49,6 +53,7 @@ public:
 	void setCell(int row, int col, const Cell& cell);
 
 private:
+	bool shiftRowsUp(int rows);
 	bool isCellBlocked(int row, int col) const;
 
 	int width_;

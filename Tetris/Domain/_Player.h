@@ -8,6 +8,7 @@
 #include "../Core/_Types.h"
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,13 @@ public:
 	bool hold();
 
 	bool receiveGarbage(int nLines, int xHoles);
+	bool receivePermanentLine();
+	bool stealHoldBlock();
+	bool fakeNextPreview(std::mt19937& rng);
+	bool lockCurrentRotation();
+	bool markHostage(const std::shared_ptr<IBlockEffect>& marker, std::mt19937& rng);
+	void removeHostageMarker(const IBlockEffect& marker);
+	std::optional<BlockType> getFakeNextPreview() const { return fakeNextPreview_; }
 	void addItem(std::unique_ptr<IItem> item);
 	bool useFirstItem(GameManager& gm);
 
@@ -89,4 +97,10 @@ protected:
 	float bannerTimer_ = 0.0f;
 
 	std::vector<std::unique_ptr<IItem>> items_;
+
+private:
+	bool finishRowRise(bool boardSurvived, int lines);
+
+	std::mt19937 garbageRng_;
+	std::optional<BlockType> fakeNextPreview_;
 };

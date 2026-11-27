@@ -16,6 +16,7 @@ void Player::reset(bool borderless, unsigned int seed)
 	board_.reset();
 	board_.setBorderless(borderless);
 	factory_.setSeed(seed);
+	garbageRng_.seed(seed ^ 0x9e3779b9u);
 	holdBlock_.reset();
 	nextBlocks_.clear();
 	canHold_ = true;
@@ -40,6 +41,7 @@ void Player::reset(bool borderless, unsigned int seed)
 
 void Player::spawnNextBlock()
 {
+	fakeNextPreview_.reset();
 	if (nextBlocks_.empty())
 	{
 		nextBlocks_.push_back(factory_.createNextBlock());
@@ -74,6 +76,10 @@ void Player::update(float dt, const InputHandler& input, float dropInterval,
 	if (input.isKeyPressed(keyBinding_.hold))
 	{
 		hold();
+		if (!alive_)
+		{
+			return;
+		}
 	}
 	if (input.isKeyPressed(keyBinding_.rotateCW))
 	{
@@ -268,7 +274,8 @@ void Player::lockCurrentBlock(LineClearResult& outResult, bool& outLocked)
 			baseScore = baseScore * 3 / 2;
 		}
 		const int comboBonus = (comboCount_ > 1) ? (comboCount_ - 1) * 50 : 0;
-		score_ += baseScore + comboBonus;
+		outResult.lineClearScore = baseScore + comboBonus;
+		score_ += outResult.lineClearScore;
 
 		if (outResult.isTSpin)
 		{
@@ -313,8 +320,17 @@ bool Player::receiveGarbage(int nLines, int xHoles)
 		return alive_;
 	}
 
-	const bool ok = board_.pushGarbageLines(nLines, xHoles, factory_.getRng());
-	if (!ok)
+	return finishRowRise(board_.pushGarbageLines(nLines, xHoles, garbageRng_), nLines);
+}
+
+bool Player::receivePermanentLine()
+{
+	return alive_ && finishRowRise(board_.pushPermanentLine(), 1);
+}
+
+bool Player::finishRowRise(bool boardSurvived, int lines)
+{
+	if (!boardSurvived)
 	{
 		alive_ = false;
 		return false;
@@ -323,7 +339,7 @@ bool Player::receiveGarbage(int nLines, int xHoles)
 	if (currentBlock_)
 	{
 		int safety = 0;
-		while (!board_.canPlace(*currentBlock_) && safety < nLines + 4)
+		while (!board_.canPlace(*currentBlock_) && safety < lines + 4)
 		{
 			currentBlock_->moveBy(0, -1);
 			++safety;
@@ -335,6 +351,48 @@ bool Player::receiveGarbage(int nLines, int xHoles)
 		}
 	}
 	return true;
+}
+
+bool Player::stealHoldBlock()
+{
+	if (!holdBlock_)
+	{
+		return false;
+	}
+	holdBlock_.reset();
+	return true;
+}
+
+bool Player::fakeNextPreview(std::mt19937& rng)
+{
+	if (fakeNextPreview_ || nextBlocks_.empty())
+	{
+		return false;
+	}
+	std::uniform_int_distribution<int> choose(1, static_cast<int>(BlockType::Count) - 1);
+	const int realShape = static_cast<int>(nextBlocks_.front()->getShape());
+	fakeNextPreview_ = static_cast<BlockType>((realShape + choose(rng)) % static_cast<int>(BlockType::Count));
+	return true;
+}
+
+bool Player::lockCurrentRotation()
+{
+	if (!currentBlock_ || currentBlock_->isRotationLocked())
+	{
+		return false;
+	}
+	currentBlock_->lockRotation();
+	return true;
+}
+
+bool Player::markHostage(const std::shared_ptr<IBlockEffect>& marker, std::mt19937& rng)
+{
+	return board_.markHostageCell(marker, rng);
+}
+
+void Player::removeHostageMarker(const IBlockEffect& marker)
+{
+	board_.removeCellEffect(marker);
 }
 
 void Player::addItem(std::unique_ptr<IItem> item)

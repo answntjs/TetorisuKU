@@ -15,7 +15,6 @@ public:
 	void setStickRate(int rate); // -1: 7-Bag 사용, 0~99: 오리지널 막대 확률 모드
 
 	virtual std::unique_ptr<Block> createNextBlock();
-	std::mt19937& getRng() { return rng_; }
 
 private:
 	void refillBag();
