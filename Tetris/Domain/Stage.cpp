@@ -74,7 +74,7 @@ StageConfig Stage::createOriginalStage(int stageNumber, bool borderless)
 	cfg.clearLineGoal = data.clearLine;
 	cfg.stickRate = -1; // 기본 7-Bag 사용 (원본 확률 모드 필요 시 data.stickRate 사용 가능)
 	cfg.borderless = borderless;
-	cfg.name = "STAGE " + std::to_string(cfg.stageNumber);
+	cfg.name = "스테이지 " + std::to_string(cfg.stageNumber);
 	return cfg;
 }
 
@@ -85,7 +85,7 @@ StageConfig Stage::createPvPStage(bool borderless)
 	cfg.dropIntervalSec = 0.55f;
 	cfg.clearLineGoal = 0;
 	cfg.borderless = borderless;
-	cfg.name = "VERSUS";
+	cfg.name = "대전 모드";
 	return cfg;
 }
 
@@ -99,6 +99,6 @@ StageConfig Stage::createPvEStage(bool borderless)
 	cfg.garbageIntervalSec = 7.0f;
 	cfg.garbageLines = 1;
 	cfg.garbageHoles = 2;
-	cfg.name = "SURVIVAL";
+	cfg.name = "방해 줄 생존";
 	return cfg;
 }

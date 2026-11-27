@@ -18,14 +18,28 @@ Console::Console(std::ostream& out, int width, int height)
 		SetConsoleMode(hOut_, mode);
 	}
 
-	SMALL_RECT tinyRect{ 0, 0, 1, 1 };
-	SetConsoleWindowInfo(hOut_, TRUE, &tinyRect);
+	isWindowsTerminal_ = (GetEnvironmentVariableA("WT_SESSION", nullptr, 0) > 0);
 
-	COORD bufferSize{ static_cast<SHORT>(width_), static_cast<SHORT>(height_) };
-	SetConsoleScreenBufferSize(hOut_, bufferSize);
+	if (!isWindowsTerminal_)
+	{
+		SMALL_RECT tinyRect{ 0, 0, 1, 1 };
+		SetConsoleWindowInfo(hOut_, TRUE, &tinyRect);
 
-	SMALL_RECT windowRect{ 0, 0, static_cast<SHORT>(width_ - 1), static_cast<SHORT>(height_ - 1) };
-	SetConsoleWindowInfo(hOut_, TRUE, &windowRect);
+		COORD bufferSize{ static_cast<SHORT>(width_), static_cast<SHORT>(height_) };
+		SetConsoleScreenBufferSize(hOut_, bufferSize);
+
+		SMALL_RECT windowRect{ 0, 0, static_cast<SHORT>(width_ - 1), static_cast<SHORT>(height_ - 1) };
+		SetConsoleWindowInfo(hOut_, TRUE, &windowRect);
+
+		if (HWND hwnd = GetConsoleWindow())
+		{
+			LONG style = GetWindowLongW(hwnd, GWL_STYLE);
+			style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
+			SetWindowLongW(hwnd, GWL_STYLE, style);
+			SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+		}
+	}
 
 	std::ios::sync_with_stdio(false);
 	out_ << "\x1b[?25l" << std::flush;
@@ -35,7 +49,7 @@ Console::Console(std::ostream& out, int width, int height)
 
 Console::~Console()
 {
-	out_ << "\x1b[0m\x1b[?25h" << std::flush;
+	out_ << "\x1b[0m\x1b[2J\x1b[3J\x1b[H\x1b[?25h" << std::flush;
 }
 
 int Console::toAnsiForeground(Color c)
@@ -97,6 +111,36 @@ void Console::clear(Color bg)
 
 void Console::present()
 {
+	if (isWindowsTerminal_)
+	{
+		CONSOLE_SCREEN_BUFFER_INFO csbi{};
+		if (GetConsoleScreenBufferInfo(hOut_, &csbi))
+		{
+			const int curW = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+			const int curH = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+			if (curW < width_ || curH < height_)
+			{
+				if (!showingSizeWarning_ || curW != lastWarnW_ || curH != lastWarnH_)
+				{
+					out_ << "\x1b[0m\x1b[2J\x1b[H"
+						<< "\x1b[93m[화면 크기 안내]\x1b[0m\n"
+						<< "창 크기를 " << width_ << " x " << height_ << " 이상으로 키워주세요.\n"
+						<< "현재 크기: " << curW << " x " << curH << "\n"
+						<< std::flush;
+					showingSizeWarning_ = true;
+					lastWarnW_ = curW;
+					lastWarnH_ = curH;
+				}
+				return;
+			}
+			else if (showingSizeWarning_)
+			{
+				showingSizeWarning_ = false;
+				out_ << "\x1b[0m\x1b[2J\x1b[H" << std::flush;
+			}
+		}
+	}
+
 	std::string frame;
 	frame.reserve(static_cast<size_t>(width_) * height_ * 4);
 

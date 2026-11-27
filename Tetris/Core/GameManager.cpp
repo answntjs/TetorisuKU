@@ -8,7 +8,9 @@
 void GameManager::setup(GameMode mode, int startLevel, bool borderless, unsigned int seed)
 {
 	mode_ = mode;
-	startLevel_ = std::clamp(startLevel, 1, mode == GameMode::StorySolo ? StoryCaseCount : 8);
+	const int maxLevel = mode == GameMode::StorySolo ? StoryCaseCount
+		: mode == GameMode::VsBot ? 5 : 8;
+	startLevel_ = std::clamp(startLevel, 1, maxLevel);
 	borderless_ = borderless;
 	players_.clear();
 	finished_ = false;
@@ -22,12 +24,12 @@ void GameManager::setup(GameMode mode, int startLevel, bool borderless, unsigned
 	case GameMode::Single:
 		stage_ = std::make_unique<Stage>(Stage::createOriginalStage(startLevel_, borderless_));
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, seed));
+			"플레이어 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, seed));
 		break;
 	case GameMode::PvE:
 		stage_ = std::make_unique<Stage>(Stage::createPvEStage(borderless_));
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, seed));
+			"플레이어 1", KeyBinding::SingleDefault(), Viewport{ 36, 3 }, borderless_, seed));
 		break;
 	case GameMode::PvP:
 	case GameMode::StoryDuel:
@@ -36,17 +38,18 @@ void GameManager::setup(GameMode mode, int startLevel, bool borderless, unsigned
 		const int top = story ? 9 : 3;
 		stage_ = story ? makeStoryDuelStage(borderless_)
 			: std::make_unique<Stage>(Stage::createPvPStage(borderless_));
-		players_.push_back(std::make_unique<Player>(story ? "1P 경찰" : "PLAYER 1",
+		players_.push_back(std::make_unique<Player>(story ? "1P 경찰" : "플레이어 1",
 			KeyBinding::Player1Default(), Viewport{ 14, top }, borderless_, seed));
-		players_.push_back(std::make_unique<Player>(story ? "2P 도둑" : "PLAYER 2",
+		players_.push_back(std::make_unique<Player>(story ? "2P 도둑" : "플레이어 2",
 			KeyBinding::Player2Default(), Viewport{ 72, top }, borderless_, seed));
 		break;
 	}
 	case GameMode::VsBot:
 		stage_ = std::make_unique<Stage>(Stage::createPvPStage(borderless_));
 		players_.push_back(std::make_unique<Player>(
-			"PLAYER 1", KeyBinding::SingleDefault(), Viewport{ 14, 3 }, borderless_, seed));
-		players_.push_back(std::make_unique<BotPlayer>("BOT", Viewport{ 72, 3 }, borderless_, seed));
+			"플레이어 1", KeyBinding::SingleDefault(), Viewport{ 14, 3 }, borderless_, seed));
+		players_.push_back(std::make_unique<BotPlayer>(
+			"봇 Lv." + std::to_string(startLevel_), Viewport{ 72, 3 }, borderless_, seed, startLevel_));
 		break;
 	case GameMode::StorySolo:
 		stage_ = makeStorySoloStage(startLevel_, borderless_, storyRng_());
@@ -124,7 +127,7 @@ void GameManager::update(float dt, const InputHandler& input)
 	case GameMode::Single:
 		if (!players_[0]->isAlive())
 		{
-			finish(false, "GAME OVER");
+			finish(false, "게임 오버");
 		}
 		else if (stage_->isCleared(*this))
 		{
@@ -132,17 +135,17 @@ void GameManager::update(float dt, const InputHandler& input)
 			stage_ = std::make_unique<Stage>(Stage::createOriginalStage(next, borderless_));
 			stage_->onStart(*this);
 			players_[0]->resetStageClearedLines();
-			players_[0]->setBanner(next == 8 ? "STAGE 8 - ENDLESS" : "STAGE " + std::to_string(next) + "!");
+			players_[0]->setBanner(next == 8 ? "스테이지 8 - 무한" : "스테이지 " + std::to_string(next) + "!");
 		}
 		break;
 	case GameMode::PvE:
 		if (!players_[0]->isAlive())
 		{
-			finish(false, "SURVIVAL FAILED");
+			finish(false, "생존 실패");
 		}
 		else if (stage_->isCleared(*this))
 		{
-			finish(true, "SURVIVAL CLEAR!");
+			finish(true, "생존 성공!");
 		}
 		break;
 	case GameMode::StorySolo:
@@ -228,7 +231,7 @@ void GameManager::finishVersus(int winner)
 		finish(winner == 0, message, winner);
 		return;
 	}
-	finish(winner == 0, winner >= 0 ? players_[winner]->getName() + " WINS!" : "DRAW!", winner);
+	finish(winner == 0, winner >= 0 ? players_[winner]->getName() + " 승리!" : "무승부!", winner);
 }
 
 void GameManager::finish(bool victory, std::string message, int winner)

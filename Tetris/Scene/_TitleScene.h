@@ -22,8 +22,10 @@ private:
   Menu menu_ = Menu::Main;
   int selection_ = 0;
   int startLevel_ = 1;
+  int botLevel_ = 1;
   int storyStartLevel_ = 1;
   bool borderless_ = false;
+  bool confirmExit_ = false;
 
   float animTimer_ = 0.0f;
   std::mt19937

@@ -18,8 +18,8 @@ GameOverScene::GameOverScene(Game& game, const GameManager& match)
 	{
 		if (const auto* player = match.getPlayer(i))
 		{
-			stats_[i] = player->getName() + "   SCORE " + std::to_string(player->getScore())
-				+ "   LINES " + std::to_string(player->getTotalClearedLines());
+			stats_[i] = player->getName() + "   점수 " + std::to_string(player->getScore())
+				+ "   줄 " + std::to_string(player->getTotalClearedLines());
 		}
 	}
 	if (const auto* pursuit = match.getStage()->getPursuitStatus())
@@ -73,7 +73,7 @@ void GameOverScene::render(Console& console, const Renderer& renderer) const
 		renderer.drawStoryPortrait(console, 91, 12, mode_ == GameMode::StorySolo ? storyCase_ : StoryCaseCount);
 	}
 	TextBox box(31, 10, 56, body, BorderStyle::Bold);
-	box.setTitle(isStoryMode(mode_) ? "추격 결과" : "RESULT");
+	box.setTitle(isStoryMode(mode_) ? "추격 결과" : "게임 결과");
 	box.setColors(Color::White, victory_ ? Color::SkyBlue : Color::Red, Color::Black, true);
 	box.draw(console);
 }

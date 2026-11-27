@@ -15,7 +15,7 @@ class Console
 {
 public:
 	static constexpr int DefaultWidth = 120;
-	static constexpr int DefaultHeight = 35;
+	static constexpr int DefaultHeight = 36;
 
 	explicit Console(std::ostream& out = std::cout, int width = DefaultWidth, int height = DefaultHeight);
 	~Console();
@@ -53,4 +53,8 @@ private:
 	int height_;
 	HANDLE hOut_;
 	std::vector<ScreenCell> backBuffer_;
+	bool isWindowsTerminal_ = false;
+	bool showingSizeWarning_ = false;
+	int lastWarnW_ = 0;
+	int lastWarnH_ = 0;
 };

@@ -1,11 +1,18 @@
 #include "_BotPlayer.h"
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 
 BotPlayer::BotPlayer(const std::string& name, const Viewport& viewport,
-	bool borderless, unsigned int seed)
+	bool borderless, unsigned int seed, int difficulty)
 	: Player(name, KeyBinding{}, viewport, borderless, seed)
+	, difficulty_(std::clamp(difficulty, 1, 5))
 {
+	static constexpr std::array<float, 5> kActionIntervals = {
+		0.42f, 0.30f, 0.21f, 0.14f, 0.085f
+	};
+	baseActionInterval_ = kActionIntervals[difficulty_ - 1];
 }
 
 void BotPlayer::reset(bool borderless, unsigned int seed)
@@ -13,6 +20,16 @@ void BotPlayer::reset(bool borderless, unsigned int seed)
 	Player::reset(borderless, seed);
 	hasPlan_ = false;
 	actionTimer_ = 0.0f;
+	elapsedTime_ = 0.0f;
+}
+
+float BotPlayer::getCurrentActionInterval() const
+{
+	if (difficulty_ < 5)
+	{
+		return baseActionInterval_;
+	}
+	return std::max(0.025f, baseActionInterval_ - elapsedTime_ * 0.0006f);
 }
 
 void BotPlayer::update(float dt, const InputHandler&, float dropInterval,
@@ -27,16 +44,19 @@ void BotPlayer::update(float dt, const InputHandler&, float dropInterval,
 		return;
 	}
 
+	elapsedTime_ += dt;
+
 	if (!hasPlan_)
 	{
 		planBestMove();
 		hasPlan_ = true;
 	}
 
+	const float actionInterval = getCurrentActionInterval();
 	actionTimer_ += dt;
-	if (actionTimer_ >= actionInterval_)
+	if (actionTimer_ >= actionInterval)
 	{
-		actionTimer_ -= actionInterval_;
+		actionTimer_ -= actionInterval;
 
 		if (currentBlock_->getAngle() != targetAngle_)
 		{

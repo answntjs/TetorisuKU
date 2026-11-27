@@ -35,12 +35,12 @@ void PauseScene::update(float)
 void PauseScene::render(Console& console, const Renderer&) const
 {
 	TextBox box(40, 12, 34,
-		"Game is paused.\n\n"
-		"  [ESC / ENTER] Resume\n"
-		"  [R]           Restart\n"
-		"  [T]           Title Menu",
+		"게임이 일시정지되었습니다.\n\n"
+		"  [ESC / ENTER] 계속하기\n"
+		"  [R]           다시 시작\n"
+		"  [T]           타이틀로",
 		BorderStyle::Bold);
-	box.setTitle("PAUSED");
+	box.setTitle("일시정지");
 	box.setColors(Color::White, Color::Yellow, Color::DarkBlue, true);
 	box.draw(console);
 }

@@ -140,16 +140,16 @@ void Renderer::renderGame(Console& console, const GameManager& gm) const
 		std::string header = std::string(kGameTitle) + "  |  " + stage->getConfig().name;
 		if (gm.isBorderless())
 		{
-			header += "  |  [BORDERLESS]";
+			header += "  |  [좌우 연결]";
 		}
 		if (stage->getConfig().garbageIntervalSec > 0.0f)
 		{
 			const int remain = std::max(0, static_cast<int>(
 				stage->getConfig().garbageIntervalSec - stage->getGarbageTimer() + 0.99f));
-			header += "  |  GARBAGE IN: " + std::to_string(remain) + "s";
+			header += "  |  방해 줄: " + std::to_string(remain) + "초";
 		}
 		console.drawText(4, 1, header, Color::Yellow);
-		console.drawText(98, 1, "[ESC] PAUSE", Color::DarkGray);
+		console.drawText(96, 1, "[ESC] 일시정지", Color::DarkGray);
 		if (const auto* pursuit = stage->getPursuitStatus())
 		{
 			drawPursuit(console, *pursuit, gm);
@@ -167,15 +167,15 @@ void Renderer::renderGame(Console& console, const GameManager& gm) const
 
 	if (gm.getPlayerCount() == 1)
 	{
-		TextBox guide(78, gm.getPlayer(0)->getViewport().originY, 32,
-			"LEFT/RIGHT : Move\n"
-			"UP / Z     : Rotate CW / CCW\n"
-			"DOWN       : Soft Drop\n"
-			"SPACE      : Hard Drop\n"
-			"LSHIFT     : Hold\n"
-			"ESC        : Pause",
+		TextBox guide(78, gm.getPlayer(0)->getViewport().originY, 34,
+			"좌/우  : 이동\n"
+			"위 / Z : 시계 / 반시계 회전\n"
+			"아래   : 소프트 드롭\n"
+			"SPACE  : 하드 드롭\n"
+			"LSHIFT : 홀드\n"
+			"ESC    : 일시정지",
 			BorderStyle::Single);
-		guide.setTitle("CONTROLS");
+		guide.setTitle("조작키");
 		guide.setColors(Color::Gray, Color::DarkSkyBlue, Color::Black, true);
 		guide.draw(console);
 	}
@@ -258,11 +258,11 @@ void Renderer::renderPlayer(Console& console, const Player& player, const Stage*
 	}
 
 	const int holdX = ox - 12;
-	drawSideBox(console, holdX, oy, 8, 4, "HOLD", player.canHold() ? Color::SkyBlue : Color::DarkGray);
+	drawSideBox(console, holdX, oy, 8, 4, "홀드", player.canHold() ? Color::SkyBlue : Color::DarkGray);
 	drawMiniBlock(console, holdX + 1, oy + 1, player.getHoldBlock());
 
 	const int sideX = ox + 2 + bw * 2 + 2;
-	drawSideBox(console, sideX, oy, 8, 12, "NEXT", wallColor);
+	drawSideBox(console, sideX, oy, 8, 12, "다음", wallColor);
 	int nextIdx = 0;
 	for (const auto& nb : player.getNextBlocks())
 	{
@@ -280,21 +280,21 @@ void Renderer::renderPlayer(Console& console, const Player& player, const Stage*
 	}
 
 	const int statY = oy + 15;
-	console.drawText(sideX, statY, "SCORE", Color::Gray);
+	console.drawText(sideX, statY, "점수", Color::Gray);
 	console.drawText(sideX, statY + 1, std::to_string(player.getScore()), Color::White);
 
-	console.drawText(sideX, statY + 3, "LINES", Color::Gray);
+	console.drawText(sideX, statY + 3, "줄", Color::Gray);
 	if (stage && stage->getConfig().clearLineGoal > 0)
 	{
 		const int remain = std::max(0, stage->getConfig().clearLineGoal - player.getStageClearedLines());
-		console.drawText(sideX, statY + 4, std::to_string(remain) + " LEFT", Color::White);
+		console.drawText(sideX, statY + 4, std::to_string(remain) + "줄 남음", Color::White);
 	}
 	else
 	{
 		console.drawText(sideX, statY + 4, std::to_string(player.getTotalClearedLines()), Color::White);
 	}
 
-	console.drawText(sideX, statY + 6, "COMBO", Color::Gray);
+	console.drawText(sideX, statY + 6, "콤보", Color::Gray);
 	console.drawText(sideX, statY + 7,
 		std::to_string(player.getComboCount()),
 		player.getComboCount() > 0 ? Color::Yellow : Color::DarkGray);
@@ -302,7 +302,7 @@ void Renderer::renderPlayer(Console& console, const Player& player, const Stage*
 	if (player.getLastClearedLines() > 0)
 	{
 		console.drawText(sideX, statY + 9,
-			"CLEARED +" + std::to_string(player.getLastClearedLines()) + "L",
+			"삭제 +" + std::to_string(player.getLastClearedLines()) + "줄",
 			Color::SkyBlue);
 	}
 
@@ -313,7 +313,7 @@ void Renderer::renderPlayer(Console& console, const Player& player, const Stage*
 
 	if (!player.isAlive())
 	{
-		console.drawText(ox + 6, oy + 9, "GAME OVER", Color::Red, Color::Black);
+		console.drawText(ox + 6, oy + 9, "게임 오버", Color::Red, Color::Black);
 	}
 }
 
