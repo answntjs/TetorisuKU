@@ -15,13 +15,26 @@ void PlayScene::onEnter()
 {
 	gameManager_.setup(mode_, startLevel_, borderless_);
 	gameOverPushed_ = false;
+	briefing_ = isStoryMode(mode_);
+	promotion_ = false;
 }
 
 void PlayScene::handleInput(const InputHandler& input)
 {
 	if (input.isKeyPressed(VK_ESCAPE))
 	{
-		game_.pushScene(std::make_unique<PauseScene>(game_, mode_, startLevel_, borderless_));
+		const int restartLevel = mode_ == GameMode::StorySolo
+			? gameManager_.getStage()->getConfig().stageNumber : startLevel_;
+		game_.pushScene(std::make_unique<PauseScene>(game_, mode_, restartLevel, borderless_));
+		return;
+	}
+
+	if (briefing_)
+	{
+		if (input.isKeyPressed(VK_RETURN) || input.isKeyPressed(VK_SPACE))
+		{
+			briefing_ = false;
+		}
 		return;
 	}
 
@@ -39,24 +52,33 @@ void PlayScene::update(float dt)
 		if (!gameOverPushed_)
 		{
 			gameOverPushed_ = true;
-			const Player* p0 = gameManager_.getPlayer(0);
-			const int score = p0 ? p0->getScore() : 0;
-			const int lines = p0 ? p0->getTotalClearedLines() : 0;
-			game_.pushScene(std::make_unique<GameOverScene>(
-				game_, gameManager_.getEndMessage(), score, lines,
-				mode_, startLevel_, borderless_));
+			game_.pushScene(std::make_unique<GameOverScene>(game_, gameManager_));
 		}
 		return;
 	}
 
 	if (lastInput_)
 	{
+		const int previousCase = gameManager_.getStage()->getConfig().stageNumber;
 		gameManager_.update(dt, *lastInput_);
 		lastInput_ = nullptr;
+		if (mode_ == GameMode::StorySolo
+			&& gameManager_.getStage()->getConfig().stageNumber != previousCase)
+		{
+			briefing_ = true;
+			promotion_ = true;
+		}
 	}
 }
 
 void PlayScene::render(Console& console, const Renderer& renderer) const
 {
-	renderer.renderGame(console, gameManager_);
+	if (briefing_)
+	{
+		renderer.renderStoryBriefing(console, gameManager_, promotion_);
+	}
+	else
+	{
+		renderer.renderGame(console, gameManager_);
+	}
 }

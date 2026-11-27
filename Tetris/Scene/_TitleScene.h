@@ -18,7 +18,9 @@ public:
 private:
   void randomizePreviewBlocks();
 
-  int selectedMode_ = 0; // 0: Single, 1: PvP, 2: VsBot, 3: PvE
+  enum class Menu { Main, Story, Classic };
+  Menu menu_ = Menu::Main;
+  int selection_ = 0;
   int startLevel_ = 1;
   bool borderless_ = false;
 

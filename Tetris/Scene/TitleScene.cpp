@@ -4,6 +4,12 @@
 #include "_TitleScene.h"
 #include <algorithm>
 
+namespace {
+constexpr std::array<GameMode, 2> kStoryModes{GameMode::StorySolo, GameMode::StoryDuel};
+constexpr std::array<GameMode, 4> kClassicModes{GameMode::Single, GameMode::PvP,
+                                                  GameMode::VsBot, GameMode::PvE};
+}
+
 TitleScene::TitleScene(Game &game) : Scene(game), rng_(std::random_device{}()) {
   randomizePreviewBlocks();
 }
@@ -25,39 +31,36 @@ void TitleScene::randomizePreviewBlocks() {
 }
 
 void TitleScene::handleInput(const InputHandler &input) {
+  const int count = menu_ == Menu::Classic ? static_cast<int>(kClassicModes.size()) : 2;
   if (input.isKeyPressed(VK_UP, true) || input.isKeyPressed('W', true)) {
-    selectedMode_ = (selectedMode_ + 3) % 4;
-  } else if (input.isKeyPressed(VK_DOWN, true) ||
-             input.isKeyPressed('S', true)) {
-    selectedMode_ = (selectedMode_ + 1) % 4;
-  } else if (input.isKeyPressed(VK_LEFT, true) ||
-             input.isKeyPressed('A', true)) {
-    startLevel_ = std::max(1, startLevel_ - 1);
-  } else if (input.isKeyPressed(VK_RIGHT, true) ||
-             input.isKeyPressed('D', true)) {
-    startLevel_ = std::min(8, startLevel_ + 1);
-  } else if (input.isKeyPressed('B')) {
-    borderless_ = !borderless_;
-  } else if (input.isKeyPressed(VK_RETURN) || input.isKeyPressed(VK_SPACE)) {
-    GameMode mode = GameMode::Single;
-    switch (selectedMode_) {
-    case 0:
-      mode = GameMode::Single;
-      break;
-    case 1:
-      mode = GameMode::PvP;
-      break;
-    case 2:
-      mode = GameMode::VsBot;
-      break;
-    case 3:
-      mode = GameMode::PvE;
-      break;
-    }
-    game_.changeScene(
-        std::make_unique<PlayScene>(game_, mode, startLevel_, borderless_));
+    selection_ = (selection_ + count - 1) % count;
+  } else if (input.isKeyPressed(VK_DOWN, true) || input.isKeyPressed('S', true)) {
+    selection_ = (selection_ + 1) % count;
   } else if (input.isKeyPressed(VK_ESCAPE)) {
-    game_.quit();
+    if (menu_ == Menu::Main) {
+      game_.quit();
+    } else {
+      selection_ = menu_ == Menu::Story ? 0 : 1;
+      menu_ = Menu::Main;
+    }
+  } else if (input.isKeyPressed(VK_RETURN) || input.isKeyPressed(VK_SPACE)) {
+    if (menu_ == Menu::Main) {
+      menu_ = selection_ == 0 ? Menu::Story : Menu::Classic;
+      selection_ = 0;
+    } else {
+      const bool story = menu_ == Menu::Story;
+      const auto mode = story ? kStoryModes[selection_] : kClassicModes[selection_];
+      game_.changeScene(std::make_unique<PlayScene>(
+          game_, mode, story ? 1 : startLevel_, !story && borderless_));
+    }
+  } else if (menu_ == Menu::Classic) {
+    if (input.isKeyPressed('B')) {
+      borderless_ = !borderless_;
+    } else if (selection_ == 0 && (input.isKeyPressed(VK_LEFT, true) || input.isKeyPressed('A', true))) {
+      startLevel_ = std::max(1, startLevel_ - 1);
+    } else if (selection_ == 0 && (input.isKeyPressed(VK_RIGHT, true) || input.isKeyPressed('D', true))) {
+      startLevel_ = std::min(8, startLevel_ + 1);
+    }
   }
 }
 
@@ -81,23 +84,28 @@ void TitleScene::render(Console &console, const Renderer &) const {
   logoBox.setColors(Color::SkyBlue, Color::Yellow, Color::Black, true);
   logoBox.draw(console);
 
-  const char *modeNames[4] = {
-      "1. SINGLE PLAY (Original Stages)", "2. PvP (2P Local Versus)",
-      "3. Vs BOT (AI Versus)", "4. PvE (Garbage Survival)"};
-
   std::string menuText;
-  for (int i = 0; i < 4; ++i) {
-    menuText += (i == selectedMode_) ? "> " : "  ";
-    menuText += modeNames[i];
-    menuText += "\n";
+  const auto addOptions = [&](const auto& names) {
+    for (size_t i = 0; i < names.size(); ++i) {
+      menuText += static_cast<int>(i) == selection_ ? "> " : "  ";
+      menuText += names[i];
+      menuText += "\n";
+    }
+  };
+  if (menu_ == Menu::Main) {
+    addOptions(std::array{"스토리 모드", "일반 모드"});
+  } else if (menu_ == Menu::Story) {
+    addOptions(std::array{"1인 수사", "2인 경찰과 도둑"});
+  } else {
+    addOptions(std::array{"싱글 플레이", "로컬 2P", "봇 대전", "방해 줄 생존"});
+    if (selection_ == 0) {
+      menuText += "\n시작 난이도 (좌우)  " + std::to_string(startLevel_) + " / 8";
+    }
+    menuText += borderless_ ? "\n[B] 좌우 연결 켜짐" : "\n[B] 좌우 연결 꺼짐";
   }
-  menuText +=
-      "\nStart Level (LEFT/RIGHT): " + std::to_string(startLevel_) + " / 8\n";
-  menuText += std::string("Borderless (B): ") +
-              (borderless_ ? "ON (No Side Walls)" : "OFF (Classic Walls)");
 
   TextBox menuBox(12, 11, 42, menuText, BorderStyle::Single);
-  menuBox.setTitle("GAME MODE");
+  menuBox.setTitle(menu_ == Menu::Story ? "스토리 모드" : menu_ == Menu::Classic ? "일반 모드" : "모드 선택");
   menuBox.setColors(Color::White, Color::Gray, Color::Black, true);
   menuBox.draw(console);
 
@@ -122,6 +130,8 @@ void TitleScene::render(Console &console, const Renderer &) const {
     }
   }
 
-  console.drawText(38, 30, "[ENTER / SPACE] Start Game    [ESC] Exit",
+  console.drawText(36, 30,
+                   menu_ == Menu::Main ? "[ENTER / SPACE] 선택    [ESC] 종료"
+                                       : "[ENTER / SPACE] 시작    [ESC] 뒤로",
                    Color::Yellow);
 }

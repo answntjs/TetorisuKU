@@ -1,19 +1,36 @@
 #include "_GameOverScene.h"
 #include "../Core/_Game.h"
+#include "../Domain/_PursuitStage.h"
 #include "_PlayScene.h"
 #include "../IO/_TextBox.h"
 #include "_TitleScene.h"
 
-GameOverScene::GameOverScene(Game& game, const std::string& message, int score, int lines,
-	GameMode mode, int startLevel, bool borderless)
+GameOverScene::GameOverScene(Game& game, const GameManager& match)
 	: Scene(game)
-	, message_(message)
-	, score_(score)
-	, lines_(lines)
-	, mode_(mode)
-	, startLevel_(startLevel)
-	, borderless_(borderless)
+	, message_(match.getEndMessage())
+	, mode_(match.getMode())
+	, restartLevel_(match.getStartLevel())
+	, borderless_(match.isBorderless())
+	, storyCase_(match.getStage()->getConfig().stageNumber)
+	, victory_(match.isVictory())
 {
+	for (size_t i = 0; i < stats_.size(); ++i)
+	{
+		if (const auto* player = match.getPlayer(i))
+		{
+			stats_[i] = player->getName() + "   SCORE " + std::to_string(player->getScore())
+				+ "   LINES " + std::to_string(player->getTotalClearedLines());
+		}
+	}
+	if (const auto* pursuit = match.getStage()->getPursuitStatus())
+	{
+		pursuitSummary_ = "추격 점수  " + std::to_string(pursuit->score) + " / "
+			+ std::to_string(pursuit->target) + "\n";
+	}
+	if (mode_ == GameMode::StorySolo)
+	{
+		restartLevel_ = victory_ ? 1 : storyCase_;
+	}
 }
 
 void GameOverScene::handleInput(const InputHandler& input)
@@ -24,7 +41,7 @@ void GameOverScene::handleInput(const InputHandler& input)
 	}
 	else if (input.isKeyPressed('R'))
 	{
-		game_.changeScene(std::make_unique<PlayScene>(game_, mode_, startLevel_, borderless_));
+		game_.changeScene(std::make_unique<PlayScene>(game_, mode_, restartLevel_, borderless_));
 	}
 }
 
@@ -32,16 +49,30 @@ void GameOverScene::update(float)
 {
 }
 
-void GameOverScene::render(Console& console, const Renderer&) const
+void GameOverScene::render(Console& console, const Renderer& renderer) const
 {
-	std::string body = message_ + "\n\n";
-	body += "  SCORE : " + std::to_string(score_) + "\n";
-	body += "  LINES : " + std::to_string(lines_) + "\n\n";
-	body += "  [R]           Restart\n";
-	body += "  [ENTER/SPACE] Title Menu";
+	std::string body = message_ + "\n\n" + pursuitSummary_;
+	for (const auto& stats : stats_)
+	{
+		if (!stats.empty())
+		{
+			body += stats + "\n";
+		}
+	}
+	if (mode_ == GameMode::StorySolo && victory_)
+	{
+		body += "\n경찰  \"이제 모두 안심할 수 있어.\"\n";
+	}
+	body += "\n[R] 다시 하기    [ENTER / SPACE] 타이틀";
 
-	TextBox box(40, 11, 34, body, BorderStyle::Bold);
-	box.setTitle("RESULT");
-	box.setColors(Color::White, Color::Red, Color::Black, true);
+	if (isStoryMode(mode_))
+	{
+		console.fillRect(14, 8, 92, 19, ' ', Color::White, Color::Black);
+		renderer.drawStoryPortrait(console, 17, 12, 0);
+		renderer.drawStoryPortrait(console, 91, 12, mode_ == GameMode::StorySolo ? storyCase_ : StoryCaseCount);
+	}
+	TextBox box(31, 10, 56, body, BorderStyle::Bold);
+	box.setTitle(isStoryMode(mode_) ? "추격 결과" : "RESULT");
+	box.setColors(Color::White, victory_ ? Color::SkyBlue : Color::Red, Color::Black, true);
 	box.draw(console);
 }

@@ -2,13 +2,13 @@
 
 #include "_Scene.h"
 #include "../Core/_Types.h"
+#include <array>
 #include <string>
 
 class GameOverScene : public Scene
 {
 public:
-	GameOverScene(Game& game, const std::string& message, int score, int lines,
-		GameMode mode, int startLevel, bool borderless);
+	GameOverScene(Game& game, const GameManager& match);
 
 	void handleInput(const InputHandler& input) override;
 	void update(float dt) override;
@@ -18,9 +18,11 @@ public:
 
 private:
 	std::string message_;
-	int score_;
-	int lines_;
+	std::array<std::string, 2> stats_;
 	GameMode mode_;
-	int startLevel_;
+	int restartLevel_;
 	bool borderless_;
+	int storyCase_;
+	bool victory_;
+	std::string pursuitSummary_;
 };
